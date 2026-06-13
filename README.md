@@ -38,53 +38,47 @@ src/
 
 ## 슬라이드 가져오기 (피그마 → 이미지)
 
-두 가지 방법을 모두 지원합니다. 비율은 제각각이어도 됩니다 (hotspot 좌표가 % 기반).
+비율은 제각각이어도 됩니다 (hotspot 좌표가 % 기반).
 
-### 방법 1 — Figma 링크 자동 캡쳐 (권장, 빌드 시 bake)
+### 방법 1 — Figma 링크 (권장, 실시간 렌더)
 
-각 슬라이드에 **Figma 프레임 링크**만 지정하면, 빌드(재배포) 때 스크립트가 그 프레임을
-PNG로 렌더해 `public/slides/<slideId>.png` 로 굽고 이미지 경로를 자동 교체합니다.
-**Figma에서 수정 → 재배포하면 최신 상태로 다시 캡쳐**됩니다.
+`/admin`에서 슬라이드의 **"Figma 프레임 링크"** 에 프레임 URL을 붙여넣으면, 아래 미리보기가
+**그 프레임의 현재 캡쳐**로 바로 바뀝니다. 발표 화면에서도 `figma-image` 서버리스 함수가
+런타임에 Figma를 렌더하므로, **피그마에서 수정하면 재배포 없이 자동 반영**됩니다.
+(함수는 결과를 Netlify Blobs에 캐시해, Figma가 잠시 느리거나 불통이어도 마지막 캡쳐를 보여줍니다.)
 
-1. **Figma 토큰 발급**: Figma → Settings → Security → *Personal access tokens* →
-   `Generate new token` (scope: **File content – Read**). 토큰 문자열을 복사.
-2. **Netlify 환경변수 등록**: Site configuration → Environment variables →
-   `FIGMA_TOKEN` = 복사한 토큰. (절대 코드/깃에 커밋하지 마세요 — 클라이언트에 노출 금지)
-3. **프레임 링크 지정**: `/admin`에서 슬라이드를 고르고 "Figma 프레임 링크"에
-   `https://www.figma.com/design/<fileKey>/...?node-id=1-23` 형태로 붙여넣기 →
-   내보내기 후 `public/slides.json` 커밋. (또는 slides.json의 슬라이드에 `"figmaUrl": "..."` 직접 추가)
-4. **재캡쳐(=재배포)**: `/admin`의 **⟳ Figma 캡쳐·재배포** 버튼(최초 1회 Netlify *Build hook* URL 입력),
-   또는 Netlify에서 Trigger deploy.
+준비물은 **Figma 토큰 하나**뿐:
+- Figma → Settings → Security → *Personal access tokens* → `Generate new token`
+  (scope: **File content – Read**)
+- Netlify → Site configuration → Environment variables → `FIGMA_TOKEN` 등록
+  (절대 코드/깃에 커밋 금지 — 서버에서만 사용)
 
-로컬에서 미리 캡쳐해보려면:
-```bash
-export FIGMA_TOKEN=figd_xxx
-npm run capture     # public/slides.json의 figmaUrl들을 캡쳐
-```
-> `FIGMA_TOKEN`이 없으면 캡쳐는 **건너뛰고** 기존 이미지를 그대로 씁니다 (빌드는 정상).
+링크 형식: `https://www.figma.com/design/<fileKey>/...?node-id=1-23`
 
-### 방법 2 — 수동 export
+### 방법 2 — 수동 이미지
 
 1. 피그마에서 프레임을 PNG(2x) / SVG로 export → `public/slides/` 에 저장.
-2. `/admin`에서 "이미지 경로"를 `/slides/파일명.png` 로 지정 (figmaUrl은 비움).
+2. `/admin`에서 Figma 링크를 비우면 나타나는 "이미지 경로"에 `/slides/파일명.png` 지정.
 
 ## 편집 모드 (`/admin`)
 
 - **구조 패널**: 섹션/슬라이드 추가·삭제·순서변경(↑↓), 다른 섹션으로 이동, 부록·데모 관리.
-- **상세 패널**: 슬라이드 이미지 위에서 **드래그하면 클릭영역(링크) 생성**.
-  생성된 영역을 클릭 → 아래에서 라벨과 링크 대상(슬라이드/부록 · 데모 · 외부 URL) 지정.
-- 편집 내용은 이 브라우저에 자동 저장(localStorage)됩니다.
-- **`⬇ slides.json 내보내기`** 로 파일을 받아 `public/slides.json` 을 덮어쓰고 커밋/배포하면
-  모두에게 반영됩니다. (정적 사이트라 편집은 브라우저 로컬 → export → 배포 흐름)
-- **`↺ 배포본으로 초기화`** 로 로컬 편집본을 버리고 배포된 `slides.json` 으로 되돌립니다.
+- **상세 패널**: Figma 링크 붙여넣기 → 미리보기 즉시 갱신. 이미지 위에서 **드래그하면 클릭영역(링크) 생성**,
+  생성된 영역을 클릭 → 라벨과 링크 대상(슬라이드/부록 · 데모 · 외부 URL) 지정.
+- 편집 내용은 이 브라우저에 자동 저장(초안)되고, 좌측 상단 **「저장」** 을 누르면 서버(Netlify Blobs)에
+  저장되어 **모든 사용자에게 반영**됩니다. 저장에는 `EDIT_PASSWORD`(Netlify env)가 필요합니다.
+- **`↺ 되돌리기`** 로 저장 안 된 변경을 버리고 마지막 저장본을 불러옵니다.
+- **`⬇ 내보내기 / ⬆ 불러오기`** 는 JSON 백업/복구용.
+
+데이터 로드 우선순위: 로컬 초안 → 서버(Blobs, `/.netlify/functions/slides`) → 기본본(`public/slides.json`).
 
 ## Netlify 배포
 
-`netlify.toml` 이 이미 포함되어 있습니다 (build=`npm run build`, publish=`dist`, SPA 리다이렉트).
+`netlify.toml` 포함 (build=`npm run build`, publish=`dist`, functions=`netlify/functions`, SPA 리다이렉트).
 
-- **방법 A (Git 연동)**: GitHub 등에 푸시 → Netlify에서 저장소 선택 → 자동 빌드/배포.
-- **방법 B (드래그&드롭)**: `npm run build` 후 `dist/` 폴더를 Netlify에 드롭.
-- **방법 C (CLI)**: `npx netlify deploy --prod` (빌드 후 `dist` 지정).
+- **권장 — Git 연동**: GitHub repo를 Netlify에 연결 → `main` push 시 자동 빌드/배포.
+- 필요한 환경변수: `FIGMA_TOKEN`(Figma 실시간 렌더), `EDIT_PASSWORD`(편집 저장).
+- 함수: `slides`(Blobs 게시/조회), `figma-image`(Figma 프레임 실시간 렌더+캐시).
 
 ## iframe 시연 주의
 

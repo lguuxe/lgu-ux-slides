@@ -12,6 +12,25 @@ export default function Editor() {
     return first || Object.keys(data.slides || {})[0] || null
   })
   const fileInputRef = useRef(null)
+  const bodyRef = useRef(null)
+  const [structW, setStructW] = useState(348) // draggable width of the structure panel
+
+  const startResize = (e) => {
+    e.preventDefault()
+    const move = (ev) => {
+      const rect = bodyRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setStructW(Math.max(240, Math.min(640, ev.clientX - rect.left)))
+    }
+    const up = () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+      document.body.style.cursor = ''
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+    document.body.style.cursor = 'col-resize'
+  }
 
   // ---- ids referenced by the nav vs. loose appendix slides ----
   const navSlideIds = useMemo(() => {
@@ -184,9 +203,9 @@ export default function Editor() {
         </div>
       </header>
 
-      <div className="editor-body">
+      <div className="editor-body" ref={bodyRef}>
         {/* ---------- structure panel ---------- */}
-        <aside className="editor-structure">
+        <aside className="editor-structure" style={{ width: structW, flexBasis: structW }}>
           <div className="panel-head">
             <span>구조</span>
             <button onClick={addSection}>+ 섹션</button>
@@ -263,6 +282,8 @@ export default function Editor() {
           </div>
         </aside>
 
+        <div className="ed-resizer" onMouseDown={startResize} title="드래그하여 패널 폭 조절" />
+
         {/* ---------- slide detail / hotspot canvas ---------- */}
         <section className="editor-detail">
           {!selected ? (
@@ -289,6 +310,16 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
   const [draft, setDraft] = useState(null) // rectangle being drawn
   const [selectedHs, setSelectedHs] = useState(null)
   const [previewBust, setPreviewBust] = useState(() => Date.now()) // force-refresh figma preview
+  const [linkInput, setLinkInput] = useState(slide.figmaUrl || '')
+  const [loading, setLoading] = useState(() => !!slide.figmaUrl)
+
+  // commit the typed Figma link → refresh the preview (with a loading spinner)
+  const applyLink = () => {
+    const url = linkInput.trim()
+    updateSlide({ figmaUrl: url || undefined })
+    setPreviewBust(Date.now())
+    setLoading(!!url)
+  }
 
   const pctFromEvent = (e) => {
     const rect = canvasRef.current.getBoundingClientRect()
@@ -344,14 +375,17 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
         <span className="se-id">id: {slideId}</span>
       </div>
       <div className="se-fields">
-        <label style={{ flex: 1 }}>
+        <label className="se-link-field">
           Figma 프레임 링크
-          <input
-            value={slide.figmaUrl || ''}
-            onChange={(e) => { updateSlide({ figmaUrl: e.target.value }); setPreviewBust(Date.now()) }}
-            placeholder="https://www.figma.com/design/…?node-id=1-23  (붙여넣으면 아래 미리보기가 바로 바뀝니다)"
-            style={{ width: '100%' }}
-          />
+          <div className="se-link-row">
+            <input
+              value={linkInput}
+              onChange={(e) => setLinkInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') applyLink() }}
+              placeholder="https://www.figma.com/design/…?node-id=1-23"
+            />
+            <button type="button" className="se-apply" onClick={applyLink}>적용</button>
+          </div>
         </label>
         {!slide.figmaUrl && (
           <label>이미지 경로 <input value={slide.image || ''} onChange={(e) => updateSlide({ image: e.target.value })} placeholder="/slides/…" /></label>
@@ -359,7 +393,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
       </div>
 
       <p className="se-hint">
-        Figma 링크를 넣으면 아래 이미지가 <b>그 프레임의 최신 캡쳐</b>로 표시됩니다(피그마에서 수정하면 자동 반영).
+        Figma 링크를 넣고 <b>«적용»</b>을 누르면 아래 이미지가 <b>그 프레임의 최신 캡쳐</b>로 바뀝니다(피그마에서 수정하면 자동 반영).
         · 이미지 위에서 <b>드래그</b>하면 클릭영역(링크)이 만들어지고, 만든 영역을 클릭하면 아래에서 링크 대상을 지정할 수 있어요.
         · 변경 후 좌측 상단 <b>저장</b>을 눌러야 모두에게 반영됩니다.
       </p>
@@ -377,8 +411,15 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
             src={imageSrcFor(slide, { bust: slide.figmaUrl ? previewBust : undefined })}
             alt={slide.title}
             draggable={false}
-            onError={imageFallback(slide)}
+            onLoad={() => setLoading(false)}
+            onError={(e) => { imageFallback(slide)(e); setLoading(false) }}
           />
+          {loading && (
+            <div className="se-loading">
+              <span className="spinner" />
+              <span className="se-loading-text">Figma에서 캡쳐 불러오는 중…</span>
+            </div>
+          )}
           {(slide.hotspots || []).map((hs) => (
             <div
               key={hs.id}
