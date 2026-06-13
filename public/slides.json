@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "title": "UX Report 2026",
+    "subtitle": "발표 자료"
+  },
+  "nav": [
+    {
+      "id": "sec-1",
+      "title": "1. 개요",
+      "children": [
+        { "id": "cover", "type": "slide" },
+        { "id": "agenda", "type": "slide" }
+      ]
+    },
+    {
+      "id": "sec-2",
+      "title": "2. 리서치",
+      "children": [
+        { "id": "research-1", "type": "slide" }
+      ]
+    },
+    {
+      "id": "sec-3",
+      "title": "3. 솔루션 & 시연",
+      "children": [
+        { "id": "solution-1", "type": "slide" }
+      ]
+    },
+    {
+      "id": "sec-appendix",
+      "title": "부록",
+      "kind": "appendix",
+      "children": [
+        { "id": "appendix-glossary", "type": "slide" },
+        { "id": "appendix-data", "type": "slide" }
+      ]
+    }
+  ],
+  "slides": {
+    "cover": {
+      "title": "표지",
+      "image": "/slides/figma-sample.png",
+      "figmaUrl": "https://www.figma.com/design/eUcbUN1fcWC4PXrxXrGMLy/-%EC%9E%A5%ED%91%9C-%EB%94%94%EC%9E%90%EC%9D%B8--260615-CEO-%EB%B3%B4%EA%B3%A0?node-id=9011-5764",
+      "hotspots": []
+    },
+    "agenda": {
+      "title": "목차",
+      "image": "/slides/agenda.svg",
+      "hotspots": [
+        {
+          "id": "hs-agenda-appendix",
+          "x": 8,
+          "y": 70,
+          "w": 30,
+          "h": 12,
+          "label": "부록: 용어 정리 →",
+          "target": { "type": "slide", "ref": "appendix-glossary" }
+        }
+      ]
+    },
+    "research-1": {
+      "title": "리서치 요약",
+      "image": "/slides/research-1.svg",
+      "hotspots": [
+        {
+          "id": "hs-research-detail",
+          "x": 55,
+          "y": 30,
+          "w": 35,
+          "h": 18,
+          "label": "상세 데이터 보기",
+          "target": { "type": "slide", "ref": "appendix-data" }
+        }
+      ]
+    },
+    "solution-1": {
+      "title": "개발된 서비스",
+      "image": "/slides/solution-1.svg",
+      "hotspots": [
+        {
+          "id": "hs-solution-demo",
+          "x": 55,
+          "y": 35,
+          "w": 35,
+          "h": 25,
+          "label": "▶ 라이브 시연",
+          "target": { "type": "demo", "ref": "demo-main" }
+        }
+      ]
+    },
+    "appendix-glossary": {
+      "title": "부록 · 용어 정리",
+      "image": "/slides/appendix-glossary.svg",
+      "hotspots": []
+    },
+    "appendix-data": {
+      "title": "부록 · 리서치 상세 데이터",
+      "image": "/slides/appendix-data.svg",
+      "hotspots": []
+    }
+  },
+  "demos": [
+    {
+      "id": "demo-main",
+      "title": "UX Governance Tool",
+      "url": "https://uxgv01-ux-governance-tool-us77.vercel.app"
+    },
+    {
+      "id": "demo-2",
+      "title": "Web 서비스",
+      "url": "https://server-production-734f.up.railway.app/web?code=688A65B8"
+    }
+  ]
+}

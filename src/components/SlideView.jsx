@@ -1,0 +1,57 @@
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useData } from '../data/DataContext.jsx'
+import Hotspot from './Hotspot.jsx'
+import BackButton from './BackButton.jsx'
+
+export default function SlideView({ slideId }) {
+  const { data, orderedSlideIds } = useData()
+  const navigate = useNavigate()
+  const slide = data.slides?.[slideId]
+
+  const idx = orderedSlideIds.indexOf(slideId)
+  const inDeck = idx !== -1
+  const prevId = inDeck && idx > 0 ? orderedSlideIds[idx - 1] : null
+  const nextId = inDeck && idx < orderedSlideIds.length - 1 ? orderedSlideIds[idx + 1] : null
+
+  // Arrow-key navigation through the deck
+  useEffect(() => {
+    function onKey(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+      if (e.key === 'ArrowRight' && nextId) navigate(`/slide/${nextId}`)
+      if (e.key === 'ArrowLeft' && prevId) navigate(`/slide/${prevId}`)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navigate, nextId, prevId])
+
+  if (!slide) {
+    return <div className="centered">슬라이드 «{slideId}» 를 찾을 수 없습니다.</div>
+  }
+
+  return (
+    <div className="slide-view">
+      <div className="toolbar">
+        <BackButton />
+        <div className="toolbar-title">{slide.title}</div>
+        <div className="toolbar-spacer" />
+        {inDeck && (
+          <div className="deck-nav">
+            <button disabled={!prevId} onClick={() => prevId && navigate(`/slide/${prevId}`)}>←</button>
+            <span className="deck-pos">{idx + 1} / {orderedSlideIds.length}</span>
+            <button disabled={!nextId} onClick={() => nextId && navigate(`/slide/${nextId}`)}>→</button>
+          </div>
+        )}
+      </div>
+
+      <div className="slide-scroll">
+        <div className="slide-canvas">
+          <img src={slide.image} alt={slide.title} draggable={false} />
+          {(slide.hotspots || []).map((hs) => (
+            <Hotspot key={hs.id} hotspot={hs} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

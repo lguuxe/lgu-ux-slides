@@ -1,0 +1,11 @@
+[build]
+  # capture runs first: renders Figma frames (needs FIGMA_TOKEN env var) into
+  # public/slides, then vite builds. capture no-ops gracefully if no token.
+  command = "npm run capture && npm run build"
+  publish = "dist"
+
+# SPA fallback so deep links / refreshes resolve to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
