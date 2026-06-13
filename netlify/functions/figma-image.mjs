@@ -86,12 +86,12 @@ export default async (req) => {
 
   // viewer/presentation: published copy
   const pub = await getBlob(PUB)
-  if (pub) return png(Buffer.from(pub), 'public, max-age=300')
+  if (pub) return png(Buffer.from(pub), 'public, max-age=3600')
   // self-heal first view: render → published
   if (token) {
     try {
       const ab = await renderFromFigma(parsed, token)
-      if (ab) { await store.set(PUB, ab); return png(Buffer.from(ab), 'public, max-age=300') }
+      if (ab) { await store.set(PUB, ab); return png(Buffer.from(ab), 'public, max-age=3600') }
     } catch { /* ignore */ }
   }
   const d = await getBlob(DRAFT)
