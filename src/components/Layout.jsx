@@ -51,7 +51,7 @@ export default function Layout() {
 
   return (
     <div
-      className={'layout' + (navOpen ? '' : ' nav-collapsed') + (chromeHidden && !navOpen ? ' chrome-hidden' : '')}
+      className={'layout' + (navOpen ? '' : ' nav-collapsed') + (chromeHidden && !navOpen ? ' chrome-hidden' : '') + (isDemo ? ' is-demo' : '')}
       onMouseMove={onMouseMove}
       onClick={onStageClick}
     >

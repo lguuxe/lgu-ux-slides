@@ -236,6 +236,11 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   backdrop-filter: blur(14px) saturate(160%);
 }
+/* demo view: toolbar stays in-flow (solid) so the iframe takes the area below it */
+.layout.nav-collapsed.is-demo .toolbar {
+  position: relative; background: var(--canvas-card);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
 .layout.chrome-hidden .toolbar { opacity: 0; transform: translateY(-8px); pointer-events: none; }
 .layout.chrome-hidden .nav-pop { opacity: 0; pointer-events: none; }
 .nav-pop { transition: opacity .3s ease; }
