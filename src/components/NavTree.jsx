@@ -40,7 +40,7 @@ function SlideNode({ node, depth, slides, onNavigate, thumbnails }) {
       style={{ paddingLeft: (thumbnails ? 10 : 12) + depth * 14 }}
     >
       {thumbnails && (
-        <span className="nt-thumb">{slide ? <img src={imageSrcFor(slide)} alt="" loading="lazy" onError={imageFallback(slide)} /> : null}</span>
+        <span className="nt-thumb">{slide ? <img src={imageSrcFor(slide, { thumb: true })} alt="" loading="lazy" onError={imageFallback(slide)} /> : null}</span>
       )}
       <span className="nt-slide-title">{slide?.title || ref}</span>
     </NavLink>

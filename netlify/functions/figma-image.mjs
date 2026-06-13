@@ -28,10 +28,10 @@ function parseFigmaUrl(url) {
 const png = (body, cacheControl) =>
   new Response(body, { headers: { 'content-type': 'image/png', 'cache-control': cacheControl } })
 
-async function renderFromFigma(parsed, token) {
+async function renderFromFigma(parsed, token, scale = 2) {
   const api =
     `https://api.figma.com/v1/images/${parsed.fileKey}` +
-    `?ids=${encodeURIComponent(parsed.nodeId)}&format=png&scale=2`
+    `?ids=${encodeURIComponent(parsed.nodeId)}&format=png&scale=${scale}`
   const r = await fetch(api, { headers: { 'X-Figma-Token': token } })
   if (!r.ok) return null
   const j = await r.json()
@@ -53,10 +53,27 @@ export default async (req) => {
   const k = `${parsed.fileKey}__${parsed.nodeId}`.replace(/:/g, '-')
   const PUB = `pub__${k}`
   const DRAFT = `draft__${k}`
+  const THUMB = `thumb__${k}`
   const store = getStore('figma-img')
   const token = process.env.FIGMA_TOKEN
 
   const getBlob = async (key) => store.get(key, { type: 'arrayBuffer' })
+
+  // tiny thumbnail for the nav (render once at small scale, cached)
+  if (params.get('thumb') === '1') {
+    const cached = await getBlob(THUMB)
+    if (cached) return png(Buffer.from(cached), 'public, max-age=3600')
+    if (token) {
+      try {
+        const ab = await renderFromFigma(parsed, token, 0.3)
+        if (ab) { await store.set(THUMB, ab); return png(Buffer.from(ab), 'public, max-age=3600') }
+      } catch { /* ignore */ }
+    }
+    // fall back to full published copy if thumb render failed
+    const pub = await getBlob(PUB)
+    if (pub) return png(Buffer.from(pub), 'public, max-age=600')
+    return new Response('thumb unavailable', { status: 502 })
+  }
 
   // 「적용」/최신화: render fresh from Figma into the draft
   if (refresh) {

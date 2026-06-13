@@ -265,6 +265,7 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 .slide-canvas img {
   display: block; width: auto; height: auto;
   max-width: 100%; max-height: calc(100vh - 82px);
+  transform: translateZ(0); /* composite onto its own layer to ease resize repaint */
 }
 
 .hotspot {

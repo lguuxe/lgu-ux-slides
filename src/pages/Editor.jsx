@@ -273,7 +273,7 @@ export default function Editor() {
                 className={'ed-slide-row' + (selectedId === id ? ' active' : '')}
                 onClick={() => setSelectedId(id)}
               >
-                <span className="ed-thumb-sm">{data.slides[id] && <img src={imageSrcFor(data.slides[id])} alt="" loading="lazy" onError={imageFallback(data.slides[id])} />}</span>
+                <span className="ed-thumb-sm">{data.slides[id] && <img src={imageSrcFor(data.slides[id], { thumb: true })} alt="" loading="lazy" onError={imageFallback(data.slides[id])} />}</span>
                 <span className="ed-slide-title">{data.slides[id]?.title || id}</span>
                 <span className="ed-row-actions" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => deleteOrphan(id)}>✕</button>
@@ -574,7 +574,7 @@ function EdSlide({ node, depth, t }) {
         onDragEnd={t.onDragEnd}
         onClick={() => t.onSelect(ref)}
       >
-        <span className="ed-thumb-sm">{slide && <img src={imageSrcFor(slide)} alt="" loading="lazy" onError={imageFallback(slide)} />}</span>
+        <span className="ed-thumb-sm">{slide && <img src={imageSrcFor(slide, { thumb: true })} alt="" loading="lazy" onError={imageFallback(slide)} />}</span>
         <span className="ed-slide-title">{slide?.title || ref}</span>
         <span className="ed-row-actions" onClick={(e) => e.stopPropagation()}>
           <button title="삭제" onClick={() => t.del(node)}>✕</button>
