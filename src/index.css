@@ -77,7 +77,9 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   display: flex; flex-direction: column;
   overflow-y: auto;
   transition: margin-left .28s cubic-bezier(0.4, 0, 0.2, 1);
+  scrollbar-width: none; /* Firefox */
 }
+.sidebar::-webkit-scrollbar { width: 0; height: 0; } /* WebKit */
 /* off-canvas slide: keep fixed width (no reflow), pull left by its own width */
 .layout.nav-collapsed .sidebar { margin-left: calc(-1 * var(--sidebar-w)); }
 
