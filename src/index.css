@@ -227,7 +227,11 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   padding: 20px 24px; border-bottom: 1px solid var(--hairline); background: var(--canvas-card);
   flex: 0 0 auto; transition: padding-left .28s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.toolbar-title { font-size: 16px; letter-spacing: -0.02em; color: var(--ink); }
+.toolbar-title { font-size: 16px; letter-spacing: -0.02em; color: var(--ink); display: flex; align-items: center; flex-wrap: wrap; gap: 0; min-width: 0; }
+.crumb { color: var(--body-mid); font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
+.crumb-num { font-family: var(--font-mono); font-size: 11px; color: var(--body-mid); }
+.crumb-sep { color: var(--body-mid); opacity: .5; margin: 0 8px; }
+.crumb-current { color: var(--ink); font-size: 16px; letter-spacing: -0.02em; }
 .toolbar-spacer { flex: 1; }
 
 .back-btn, .reload-btn, .ext-link {
@@ -343,6 +347,10 @@ button.danger { color: var(--body); }
 }
 .panel-head button:hover, .ed-section-head button:hover, .ed-add-slide:hover { border-color: rgba(255,255,255,.5); }
 .panel-head-actions { display: flex; gap: 6px; }
+.ed-meta { display: flex; flex-direction: column; gap: 8px; padding: 0 2px 14px; margin-bottom: 6px; border-bottom: 1px solid var(--hairline); }
+.ed-meta label { display: flex; flex-direction: column; gap: 4px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: var(--body-mid); }
+.ed-meta input { background: var(--canvas); border: 1px solid var(--hairline); color: var(--ink); border-radius: 6px; padding: 7px 10px; font-size: 13px; letter-spacing: -0.01em; }
+.ed-meta input:focus { outline: none; border-color: var(--pill-border); }
 
 /* ---- editor structure tree ---- */
 .ed-tree-hint { font-size: 11px; color: var(--body-mid); margin: 0 4px 12px; line-height: 1.45; }

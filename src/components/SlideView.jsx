@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback } from '../lib/images.js'
+import { ancestorGroups, groupNumbers } from '../lib/nav.js'
 import Hotspot from './Hotspot.jsx'
 import BackButton from './BackButton.jsx'
 
@@ -34,7 +35,19 @@ export default function SlideView({ slideId }) {
     <div className="slide-view">
       <div className="toolbar">
         <BackButton />
-        <div className="toolbar-title">{slide.title}</div>
+        <div className="toolbar-title">
+          {(() => {
+            const numbers = groupNumbers(data.nav)
+            return ancestorGroups(data.nav, slideId).map((g) => (
+              <span key={g.id} className="crumb">
+                {numbers[g.id] && <span className="crumb-num">{numbers[g.id]}</span>}
+                {g.title}
+                <span className="crumb-sep">›</span>
+              </span>
+            ))
+          })()}
+          <span className="crumb-current">{slide.title}</span>
+        </div>
         <div className="toolbar-spacer" />
         {inDeck && (
           <div className="deck-nav">

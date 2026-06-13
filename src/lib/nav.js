@@ -44,6 +44,24 @@ export function groupNumbers(nav) {
   return map
 }
 
+// Chain of ancestor GROUP nodes for a slide ref (root → immediate parent).
+export function ancestorGroups(nav, ref) {
+  let result = []
+  const walk = (nodes, chain) => {
+    for (const n of nodes || []) {
+      if (isGroup(n)) {
+        if (walk(n.children, [...chain, n])) return true
+      } else if (slideRef(n) === ref) {
+        result = chain
+        return true
+      }
+    }
+    return false
+  }
+  walk(nav, [])
+  return result
+}
+
 export function findNode(nav, id) {
   for (const n of nav || []) {
     if (n.id === id) return n

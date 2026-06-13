@@ -66,6 +66,7 @@ export default function Editor() {
     setSelectedId(ref)
   }
   const renameNode = (nodeId, title) => setData((d) => ({ ...d, nav: updateNode(d.nav, nodeId, { title }) }))
+  const updateMeta = (patch) => setData((d) => ({ ...d, meta: { ...(d.meta || {}), ...patch } }))
 
   const deleteNode = (node) => {
     if (isGroup(node)) {
@@ -246,6 +247,15 @@ export default function Editor() {
       <div className="editor-body" ref={bodyRef}>
         {/* ---------- structure panel ---------- */}
         <aside className="editor-structure" style={{ width: structW, flexBasis: structW }}>
+          <div className="ed-meta">
+            <label>사이트 제목
+              <input value={data.meta?.title || ''} onChange={(e) => updateMeta({ title: e.target.value })} placeholder="제목" />
+            </label>
+            <label>부제
+              <input value={data.meta?.subtitle || ''} onChange={(e) => updateMeta({ subtitle: e.target.value })} placeholder="부제(선택)" />
+            </label>
+          </div>
+
           <div className="panel-head">
             <span>구조</span>
             <span className="panel-head-actions">
