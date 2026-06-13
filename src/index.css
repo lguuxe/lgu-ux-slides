@@ -239,8 +239,6 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 .layout.chrome-hidden .toolbar { opacity: 0; transform: translateY(-8px); pointer-events: none; }
 .layout.chrome-hidden .nav-pop { opacity: 0; pointer-events: none; }
 .nav-pop { transition: opacity .3s ease; }
-/* invisible top-edge strip to reveal the chrome (also works over the demo iframe) */
-.chrome-trigger { position: absolute; top: 0; left: 0; right: 0; height: 12px; z-index: 14; }
 .toolbar-title { font-size: 16px; letter-spacing: -0.02em; color: var(--ink); display: flex; align-items: center; flex-wrap: wrap; gap: 0; min-width: 0; }
 .crumb { color: var(--body-mid); font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
 .crumb-num { font-family: var(--font-mono); font-size: 11px; color: var(--body-mid); }
