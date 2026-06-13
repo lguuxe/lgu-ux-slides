@@ -30,8 +30,9 @@ export default function Layout() {
   // the top edge of the screen, and hides shortly after it leaves.
   const onMouseMove = (e) => {
     if (navOpen) return
-    if (e.clientY <= 72) showChrome()
-    else if (!menuOpenRef.current && !chromeHidden) scheduleHide(500)
+    if (e.clientY <= 12) showChrome() // trigger only at the very top edge
+    else if (e.clientY > 72 && !menuOpenRef.current && !chromeHidden) scheduleHide(500)
+    // between 12–72px: leave as-is so you can reach the revealed toolbar
   }
   useEffect(() => {
     clearTimeout(hideTimer.current)
