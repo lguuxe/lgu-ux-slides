@@ -291,6 +291,29 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 .iframe-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
 
 /* ===================== Editor ===================== */
+/* ---- edit-mode auth gate ---- */
+.edit-gate { height: 100%; display: flex; align-items: center; justify-content: center; background: var(--canvas); padding: 24px; }
+.edit-gate-card {
+  width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 14px;
+  background: var(--canvas-card); border: 1px solid var(--hairline); border-radius: 16px; padding: 28px;
+}
+.edit-gate-card h1 { font-size: 18px; letter-spacing: -0.02em; }
+.edit-gate-card .back-to-show { align-self: flex-start; }
+.gate-msg { font-size: 13px; color: var(--body-mid); line-height: 1.5; margin: 0; }
+.gate-msg.err { color: var(--accent-sunset); }
+.gate-msg.warn { color: var(--ink); }
+.edit-gate-card input {
+  background: var(--canvas); border: 1px solid var(--hairline); color: var(--ink);
+  border-radius: 9px; padding: 11px 13px; font-size: 14px;
+}
+.edit-gate-card input:focus { outline: none; border-color: var(--pill-border); }
+.gate-btn {
+  background: var(--ink); color: var(--canvas); border: 1px solid var(--ink);
+  border-radius: var(--pill); padding: 10px; font-size: 14px; cursor: pointer; transition: background .15s;
+}
+.gate-btn:hover:not(:disabled) { background: #e6e6e6; }
+.gate-btn:disabled { opacity: .5; cursor: default; }
+
 .editor { height: 100%; display: flex; flex-direction: column; }
 .editor-top {
   display: flex; align-items: center; gap: 18px; padding: 14px 24px;

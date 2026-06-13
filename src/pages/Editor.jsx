@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback } from '../lib/images.js'
@@ -9,7 +9,117 @@ import {
 
 const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4).toString(36)}`
 
+const LOCK_FN = '/.netlify/functions/edit-lock'
+
+// ===================== Auth gate + single-editor lock =====================
 export default function Editor() {
+  const [token, setToken] = useState(null)
+
+  // heartbeat + release while editing
+  useEffect(() => {
+    if (!token) return
+    const beat = () => {
+      fetch(LOCK_FN, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'heartbeat', token }),
+      }).then((r) => r.json()).then((j) => {
+        if (j && j.ok === false && j.reason === 'lost') {
+          alert('편집 세션이 만료되어 잠금이 해제됐습니다. 다시 진입해 주세요.')
+          sessionStorage.removeItem('edit-token')
+          setToken(null)
+        }
+      }).catch(() => {})
+    }
+    const hb = setInterval(beat, 45000)
+    const release = () => {
+      try {
+        const blob = new Blob([JSON.stringify({ action: 'release', token })], { type: 'application/json' })
+        navigator.sendBeacon?.(LOCK_FN, blob)
+      } catch { /* ignore */ }
+    }
+    window.addEventListener('pagehide', release)
+    return () => { clearInterval(hb); window.removeEventListener('pagehide', release); release() }
+  }, [token])
+
+  if (!token) return <EditGate onAuthed={setToken} />
+  return <EditorInner />
+}
+
+function EditGate({ onAuthed }) {
+  const [pw, setPw] = useState('')
+  const [status, setStatus] = useState('idle') // idle | checking | bad | locked | error
+  const [lockedSince, setLockedSince] = useState(null)
+
+  const tryAcquire = async (password) => {
+    setStatus('checking')
+    let token = sessionStorage.getItem('edit-token')
+    if (!token) token = (window.crypto?.randomUUID?.() || ('t' + Date.now() + Math.random())).toString()
+    try {
+      const res = await fetch(LOCK_FN, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'acquire', password, token }),
+      })
+      const ct = res.headers.get('content-type') || ''
+      if (!ct.includes('application/json')) {
+        // function unavailable (e.g. local `vite dev`) → allow in for local editing
+        sessionStorage.setItem('edit-token', token)
+        sessionStorage.setItem('edit-pw', password)
+        onAuthed(token)
+        return
+      }
+      const j = await res.json()
+      if (j.ok) {
+        sessionStorage.setItem('edit-token', token)
+        sessionStorage.setItem('edit-pw', password)
+        onAuthed(token)
+      } else if (j.reason === 'bad-password') setStatus('bad')
+      else if (j.reason === 'locked') { setStatus('locked'); setLockedSince(j.since) }
+      else setStatus('error')
+    } catch {
+      setStatus('error')
+    }
+  }
+
+  // auto-resume if this browser session already authenticated
+  useEffect(() => {
+    const savedPw = sessionStorage.getItem('edit-pw')
+    if (savedPw) { setPw(savedPw); tryAcquire(savedPw) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const minsAgo = lockedSince ? Math.max(1, Math.round((Date.now() - lockedSince) / 60000)) : null
+
+  return (
+    <div className="edit-gate">
+      <form className="edit-gate-card" onSubmit={(e) => { e.preventDefault(); tryAcquire(pw) }}>
+        <Link to="/" className="back-to-show">← 발표 보기</Link>
+        <h1>편집 모드</h1>
+        {status === 'locked' ? (
+          <>
+            <p className="gate-msg warn">다른 사람이 편집 중입니다{minsAgo ? ` (약 ${minsAgo}분 전 시작)` : ''}.<br />잠시 후 다시 시도해 주세요.</p>
+            <button type="button" className="gate-btn" onClick={() => tryAcquire(pw)}>다시 시도</button>
+          </>
+        ) : (
+          <>
+            <p className="gate-msg">편집하려면 비밀번호를 입력하세요.</p>
+            <input
+              type="password" value={pw} autoFocus
+              onChange={(e) => { setPw(e.target.value); if (status !== 'idle') setStatus('idle') }}
+              placeholder="편집 비밀번호"
+            />
+            {status === 'bad' && <p className="gate-msg err">비밀번호가 올바르지 않습니다.</p>}
+            {status === 'error' && <p className="gate-msg err">확인 중 오류가 발생했습니다.</p>}
+            <button type="submit" className="gate-btn" disabled={status === 'checking' || !pw}>
+              {status === 'checking' ? '확인 중…' : '입장'}
+            </button>
+          </>
+        )}
+      </form>
+    </div>
+  )
+}
+
+function EditorInner() {
   const { data, setData, source, resetToPublished, importData, publish } = useData()
   const [selectedId, setSelectedId] = useState(() => {
     const first = deckSlideRefs(data.nav)[0]
@@ -161,18 +271,14 @@ export default function Editor() {
   const [saving, setSaving] = useState(false)
 
   // Save = publish the current data to the server (Netlify Blobs) for all visitors.
+  // Password was provided at edit-mode entry (stored for the session).
   const save = async () => {
-    let pw = sessionStorage.getItem('edit-pw')
-    if (!pw) {
-      pw = prompt('편집 비밀번호를 입력하세요:')
-      if (!pw) return
-    }
+    const pw = sessionStorage.getItem('edit-pw')
+    if (!pw) { alert('편집 세션이 없습니다. 편집 모드로 다시 진입해 주세요.'); return }
     setSaving(true)
     try {
       await publish(pw)
-      sessionStorage.setItem('edit-pw', pw)
     } catch (e) {
-      sessionStorage.removeItem('edit-pw')
       alert('저장 실패: ' + e.message)
     } finally {
       setSaving(false)
