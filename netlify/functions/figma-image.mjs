@@ -1,15 +1,14 @@
 /**
- * Live Figma frame renderer.
+ * Figma frame image, cached in Netlify Blobs.
  *
  *   GET /.netlify/functions/figma-image?url=<encoded figma frame url>
+ *   GET /.netlify/functions/figma-image?url=...&refresh=1   ← re-render from Figma
  *
- * Renders the referenced frame via the Figma Images API (using the server-side
- * FIGMA_TOKEN) and returns the PNG. The result is cached in Netlify Blobs so that
- * if Figma is slow/unreachable we can still serve the last good copy — which keeps
- * the deck resilient during a live presentation.
- *
- * The image always reflects the current Figma state when reachable, so editing a
- * frame in Figma shows up on the next (uncached) load — no rebuild needed.
+ * Default (viewer) path: serve the stored copy from Blobs — fast, persistent, and
+ * independent of Figma at view time (good for a live presentation). The image is
+ * fetched from Figma only the first time a frame is seen, or when `refresh=1` is
+ * requested (the editor uses that when opening a slide / pressing «적용»). So a
+ * Figma edit shows up after it's re-captured from the editor, not on every load.
  */
 import { getStore } from '@netlify/blobs'
 
@@ -27,13 +26,27 @@ function parseFigmaUrl(url) {
   }
 }
 
-const png = (body, maxAge) =>
-  new Response(body, {
-    headers: { 'content-type': 'image/png', 'cache-control': `public, max-age=${maxAge}` },
-  })
+const png = (body, cacheControl) =>
+  new Response(body, { headers: { 'content-type': 'image/png', 'cache-control': cacheControl } })
+
+async function renderFromFigma(parsed, token) {
+  const api =
+    `https://api.figma.com/v1/images/${parsed.fileKey}` +
+    `?ids=${encodeURIComponent(parsed.nodeId)}&format=png&scale=2`
+  const r = await fetch(api, { headers: { 'X-Figma-Token': token } })
+  if (!r.ok) return null
+  const j = await r.json()
+  const imgUrl = j.images?.[parsed.nodeId]
+  if (!imgUrl) return null
+  const ir = await fetch(imgUrl)
+  if (!ir.ok) return null
+  return await ir.arrayBuffer()
+}
 
 export default async (req) => {
-  const figmaUrl = new URL(req.url).searchParams.get('url')
+  const params = new URL(req.url).searchParams
+  const figmaUrl = params.get('url')
+  const forceRefresh = params.get('refresh') === '1'
   const parsed = figmaUrl && parseFigmaUrl(figmaUrl)
   if (!parsed) return new Response('invalid figma url', { status: 400 })
 
@@ -41,33 +54,28 @@ export default async (req) => {
   const store = getStore('figma-img')
   const token = process.env.FIGMA_TOKEN
 
-  // 1) try a fresh render from Figma
+  // 1) viewer path: serve the stored copy as-is
+  if (!forceRefresh) {
+    const cached = await store.get(cacheKey, { type: 'arrayBuffer' })
+    if (cached) return png(Buffer.from(cached), 'public, max-age=300')
+  }
+
+  // 2) (re)capture from Figma and persist
   if (token) {
     try {
-      const api =
-        `https://api.figma.com/v1/images/${parsed.fileKey}` +
-        `?ids=${encodeURIComponent(parsed.nodeId)}&format=png&scale=2`
-      const r = await fetch(api, { headers: { 'X-Figma-Token': token } })
-      if (r.ok) {
-        const j = await r.json()
-        const imgUrl = j.images?.[parsed.nodeId]
-        if (imgUrl) {
-          const ir = await fetch(imgUrl)
-          if (ir.ok) {
-            const ab = await ir.arrayBuffer()
-            await store.set(cacheKey, ab) // durable fallback copy
-            return png(Buffer.from(ab), 300)
-          }
-        }
+      const ab = await renderFromFigma(parsed, token)
+      if (ab) {
+        await store.set(cacheKey, ab)
+        return png(Buffer.from(ab), forceRefresh ? 'no-store' : 'public, max-age=300')
       }
     } catch {
-      // fall through to cache
+      // fall through to any stored copy
     }
   }
 
-  // 2) fallback: last cached copy
+  // 3) last resort: stored copy even when a refresh was requested but Figma failed
   const cached = await store.get(cacheKey, { type: 'arrayBuffer' })
-  if (cached) return png(Buffer.from(cached), 60)
+  if (cached) return png(Buffer.from(cached), 'public, max-age=60')
 
   return new Response('figma image unavailable', { status: 502 })
 }

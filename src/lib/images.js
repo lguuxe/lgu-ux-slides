@@ -3,8 +3,10 @@
 // otherwise use the slide's static image path.
 export function imageSrcFor(slide, opts = {}) {
   if (slide?.figmaUrl) {
-    const base = `/.netlify/functions/figma-image?url=${encodeURIComponent(slide.figmaUrl)}`
-    return opts.bust ? `${base}&t=${opts.bust}` : base
+    let url = `/.netlify/functions/figma-image?url=${encodeURIComponent(slide.figmaUrl)}`
+    if (opts.refresh) url += '&refresh=1' // editor: re-capture from Figma + store in Blobs
+    if (opts.bust) url += `&t=${opts.bust}`
+    return url
   }
   return slide?.image || ''
 }

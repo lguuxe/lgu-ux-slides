@@ -408,7 +408,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
           onMouseLeave={() => draft && setDraft(null)}
         >
           <img
-            src={imageSrcFor(slide, { bust: slide.figmaUrl ? previewBust : undefined })}
+            src={imageSrcFor(slide, { bust: slide.figmaUrl ? previewBust : undefined, refresh: true })}
             alt={slide.title}
             draggable={false}
             onLoad={() => setLoading(false)}
