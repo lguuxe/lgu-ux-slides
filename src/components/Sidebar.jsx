@@ -1,27 +1,10 @@
-import { useState } from 'react'
 import { NavLink, Link, useLocation } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
+import { isGroup, groupNumbers } from '../lib/nav.js'
+import NavTree from './NavTree.jsx'
 
-/* ---- inline icons (16px grid, inherit currentColor) ---- */
 const sv = { width: 15, height: 15, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }
-
-function ChevronIcon({ className }) {
-  return (
-    <svg {...sv} className={className} aria-hidden="true">
-      <path d="M4 6.5l4 4 4-4" />
-    </svg>
-  )
-}
-function AppendixIcon() {
-  // bookmark — supplementary / saved material
-  return (
-    <svg {...sv} aria-hidden="true">
-      <path d="M4 2.5h8v11l-4-2.5-4 2.5z" />
-    </svg>
-  )
-}
 function DemoIcon() {
-  // browser window with a play glyph — live demo
   return (
     <svg {...sv} aria-hidden="true">
       <rect x="2" y="3" width="12" height="10" rx="1.5" />
@@ -31,7 +14,6 @@ function DemoIcon() {
   )
 }
 function EditIcon() {
-  // pencil
   return (
     <svg {...sv} aria-hidden="true">
       <path d="M11 2.6l2.4 2.4" />
@@ -43,41 +25,11 @@ function EditIcon() {
 export default function Sidebar({ onCollapse }) {
   const { data } = useData()
   const location = useLocation()
-  const [collapsed, setCollapsed] = useState({})
+  const numbers = groupNumbers(data.nav)
 
-  const toggle = (id) =>
-    setCollapsed((c) => ({ ...c, [id]: !c[id] }))
-
-  const renderSection = (section) => {
-    const isCollapsed = collapsed[section.id]
-    const isAppendix = section.kind === 'appendix'
-    return (
-      <div key={section.id} className={'nav-section' + (isAppendix ? ' appendix' : '')}>
-        <button className="nav-section-title" onClick={() => toggle(section.id)}>
-          {isAppendix && <span className="ns-icon"><AppendixIcon /></span>}
-          <span className="ns-text">{section.title}</span>
-          <ChevronIcon className={'ns-chevron' + (isCollapsed ? ' closed' : '')} />
-        </button>
-        {!isCollapsed && (
-          <ul className="nav-list">
-            {(section.children || []).map((child) => (
-              <li key={child.id}>
-                <NavLink
-                  to={`/slide/${child.id}`}
-                  className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
-                >
-                  {data.slides?.[child.id]?.title || child.id}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    )
-  }
-
-  const mainSections = (data.nav || []).filter((s) => s.kind !== 'appendix')
-  const appendixSections = (data.nav || []).filter((s) => s.kind === 'appendix')
+  const isAppendix = (n) => isGroup(n) && n.kind === 'appendix'
+  const mainNodes = (data.nav || []).filter((n) => !isAppendix(n))
+  const appendixNodes = (data.nav || []).filter(isAppendix)
 
   return (
     <aside className="sidebar">
@@ -87,20 +39,20 @@ export default function Sidebar({ onCollapse }) {
           {data.meta?.subtitle && <div className="sidebar-sub">{data.meta.subtitle}</div>}
         </div>
         {onCollapse && (
-          <button className="sidebar-collapse" onClick={onCollapse} title="사이드바 접기">
-            «
-          </button>
+          <button className="sidebar-collapse" onClick={onCollapse} title="사이드바 접기">«</button>
         )}
       </div>
 
-      {/* scrollable middle: main sections only */}
+      {/* scrollable middle: main tree */}
       <nav className="nav nav-scroll">
-        {mainSections.map(renderSection)}
+        <NavTree nodes={mainNodes} numbers={numbers} slides={data.slides} thumbnails />
       </nav>
 
       {/* fixed bottom: appendix + live demos */}
       <div className="nav-fixed">
-        {appendixSections.map(renderSection)}
+        {appendixNodes.length > 0 && (
+          <NavTree nodes={appendixNodes} numbers={numbers} slides={data.slides} thumbnails />
+        )}
 
         {(data.demos || []).length > 0 && (
           <div className="nav-section gnb">
@@ -113,10 +65,7 @@ export default function Sidebar({ onCollapse }) {
                 const active = location.pathname === `/demo/${demo.id}`
                 return (
                   <li key={demo.id}>
-                    <NavLink
-                      to={`/demo/${demo.id}`}
-                      className={'nav-item' + (active ? ' active' : '')}
-                    >
+                    <NavLink to={`/demo/${demo.id}`} className={'nav-item' + (active ? ' active' : '')}>
                       {demo.title}
                     </NavLink>
                   </li>

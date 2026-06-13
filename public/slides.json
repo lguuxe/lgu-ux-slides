@@ -6,36 +6,30 @@
   "nav": [
     {
       "id": "sec-1",
-      "title": "1. 개요",
+      "title": "개요",
       "children": [
-        {
-          "id": "cover",
-          "type": "slide"
-        },
-        {
-          "id": "agenda",
-          "type": "slide"
-        }
+        { "id": "n-cover", "ref": "cover" },
+        { "id": "n-agenda", "ref": "agenda" }
       ]
     },
     {
       "id": "sec-2",
-      "title": "2. 리서치",
+      "title": "리서치",
       "children": [
         {
-          "id": "research-1",
-          "type": "slide"
+          "id": "g-2-1",
+          "title": "정량 조사",
+          "children": [
+            { "id": "n-research-1", "ref": "research-1" }
+          ]
         }
       ]
     },
     {
       "id": "sec-3",
-      "title": "3. 솔루션 & 시연",
+      "title": "솔루션 & 시연",
       "children": [
-        {
-          "id": "solution-1",
-          "type": "slide"
-        }
+        { "id": "n-solution-1", "ref": "solution-1" }
       ]
     },
     {
@@ -43,14 +37,8 @@
       "title": "부록",
       "kind": "appendix",
       "children": [
-        {
-          "id": "appendix-glossary",
-          "type": "slide"
-        },
-        {
-          "id": "appendix-data",
-          "type": "slide"
-        }
+        { "id": "n-gloss", "ref": "appendix-glossary" },
+        { "id": "n-appdata", "ref": "appendix-data" }
       ]
     }
   ],

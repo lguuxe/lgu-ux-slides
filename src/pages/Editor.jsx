@@ -2,13 +2,17 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback } from '../lib/images.js'
+import {
+  isGroup, slideRef, groupNumbers, deckSlideRefs, allNavSlideRefs,
+  findNode, containsId, removeNode, insertNode, updateNode,
+} from '../lib/nav.js'
 
 const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4).toString(36)}`
 
 export default function Editor() {
   const { data, setData, source, resetToPublished, importData, publish } = useData()
   const [selectedId, setSelectedId] = useState(() => {
-    const first = data.nav?.[0]?.children?.[0]?.id
+    const first = deckSlideRefs(data.nav)[0]
     return first || Object.keys(data.slides || {})[0] || null
   })
   const fileInputRef = useRef(null)
@@ -32,89 +36,97 @@ export default function Editor() {
     document.body.style.cursor = 'col-resize'
   }
 
-  // ---- ids referenced by the nav vs. loose appendix slides ----
-  const navSlideIds = useMemo(() => {
-    const set = new Set()
-    for (const s of data.nav || []) for (const c of s.children || []) set.add(c.id)
-    return set
+  // ---- orphan slides (in data.slides but not anywhere in the nav tree) ----
+  const orphanIds = useMemo(() => {
+    const refs = allNavSlideRefs(data.nav)
+    return Object.keys(data.slides || {}).filter((id) => !refs.has(id))
   }, [data])
-  const appendixIds = useMemo(
-    () => Object.keys(data.slides || {}).filter((id) => !navSlideIds.has(id)),
-    [data, navSlideIds]
-  )
+  const numbers = useMemo(() => groupNumbers(data.nav), [data])
 
   const selected = selectedId ? data.slides?.[selectedId] : null
 
-  // ---------- structure mutations ----------
-  const addSection = () => {
-    const id = uid('sec')
-    setData((d) => ({ ...d, nav: [...(d.nav || []), { id, title: '새 섹션', children: [] }] }))
+  // ---------- tree structure mutations ----------
+  const addGroup = (parentId) => {
+    const node = { id: uid('g'), title: '새 그룹', children: [] }
+    setData((d) => ({ ...d, nav: parentId ? insertNode(d.nav, parentId, 'inside', node) : [...(d.nav || []), node] }))
   }
-  const renameSection = (sectionId, title) => {
+  const addSlideNode = (parentId) => {
+    const ref = uid('slide')
+    const node = { id: uid('n'), ref }
     setData((d) => ({
       ...d,
-      nav: d.nav.map((s) => (s.id === sectionId ? { ...s, title } : s)),
+      slides: { ...d.slides, [ref]: { title: '새 슬라이드', image: '/slides/cover.svg', hotspots: [] } },
+      nav: parentId ? insertNode(d.nav, parentId, 'inside', node) : [...(d.nav || []), node],
     }))
+    setSelectedId(ref)
   }
-  const deleteSection = (sectionId) => {
-    if (!confirm('섹션을 삭제할까요? (슬라이드 데이터는 부록으로 남습니다)')) return
-    setData((d) => ({ ...d, nav: d.nav.filter((s) => s.id !== sectionId) }))
+  const addOrphan = () => {
+    const ref = uid('slide')
+    setData((d) => ({ ...d, slides: { ...d.slides, [ref]: { title: '새 슬라이드(링크 전용)', image: '/slides/cover.svg', hotspots: [] } } }))
+    setSelectedId(ref)
   }
-  const moveSlide = (sectionId, index, dir) => {
-    setData((d) => ({
-      ...d,
-      nav: d.nav.map((s) => {
-        if (s.id !== sectionId) return s
-        const children = [...s.children]
-        const j = index + dir
-        if (j < 0 || j >= children.length) return s
-        ;[children[index], children[j]] = [children[j], children[index]]
-        return { ...s, children }
-      }),
-    }))
+  const renameNode = (nodeId, title) => setData((d) => ({ ...d, nav: updateNode(d.nav, nodeId, { title }) }))
+
+  const deleteNode = (node) => {
+    if (isGroup(node)) {
+      if (!confirm('이 그룹과 하위 항목을 네비에서 제거할까요?\n(슬라이드 내용은 남아 "링크 전용"으로 이동합니다)')) return
+      setData((d) => ({ ...d, nav: removeNode(d.nav, node.id).nav }))
+    } else {
+      if (!confirm('이 슬라이드를 완전히 삭제할까요?')) return
+      const ref = slideRef(node)
+      setData((d) => {
+        const slides = { ...d.slides }
+        delete slides[ref]
+        return { ...d, slides, nav: removeNode(d.nav, node.id).nav }
+      })
+      if (selectedId === ref) setSelectedId(null)
+    }
   }
-  const reassignSlide = (slideId, fromSectionId, toSectionId) => {
-    setData((d) => ({
-      ...d,
-      nav: d.nav.map((s) => {
-        if (s.id === fromSectionId) return { ...s, children: s.children.filter((c) => c.id !== slideId) }
-        if (s.id === toSectionId && !s.children.some((c) => c.id === slideId))
-          return { ...s, children: [...s.children, { id: slideId, type: 'slide' }] }
-        return s
-      }),
-    }))
-  }
-  const addSlide = (sectionId) => {
-    const id = uid('slide')
-    setData((d) => ({
-      ...d,
-      slides: { ...d.slides, [id]: { title: '새 슬라이드', image: '/slides/cover.svg', hotspots: [] } },
-      nav: d.nav.map((s) =>
-        s.id === sectionId ? { ...s, children: [...s.children, { id, type: 'slide' }] } : s
-      ),
-    }))
-    setSelectedId(id)
-  }
-  const addAppendix = () => {
-    const id = uid('appendix')
-    setData((d) => ({
-      ...d,
-      slides: { ...d.slides, [id]: { title: '새 슬라이드(링크 전용)', image: '/slides/cover.svg', hotspots: [] } },
-    }))
-    setSelectedId(id)
-  }
-  const deleteSlide = (slideId) => {
+  const deleteOrphan = (ref) => {
     if (!confirm('이 슬라이드를 완전히 삭제할까요?')) return
-    setData((d) => {
-      const slides = { ...d.slides }
-      delete slides[slideId]
-      return {
-        ...d,
-        slides,
-        nav: d.nav.map((s) => ({ ...s, children: s.children.filter((c) => c.id !== slideId) })),
-      }
-    })
-    if (selectedId === slideId) setSelectedId(null)
+    setData((d) => { const slides = { ...d.slides }; delete slides[ref]; return { ...d, slides } })
+    if (selectedId === ref) setSelectedId(null)
+  }
+
+  // ---------- drag & drop ----------
+  const [dragId, setDragId] = useState(null)
+  const [dropInfo, setDropInfo] = useState(null)
+  const onDragStart = (e, id) => {
+    setDragId(id)
+    e.dataTransfer.effectAllowed = 'move'
+    try { e.dataTransfer.setData('text/plain', id) } catch { /* ignore */ }
+  }
+  const onDragOver = (e, node, group) => {
+    e.preventDefault()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const y = e.clientY - rect.top
+    const h = rect.height || 1
+    const pos = group
+      ? (y < h * 0.3 ? 'before' : y > h * 0.7 ? 'after' : 'inside')
+      : (y < h * 0.5 ? 'before' : 'after')
+    setDropInfo((prev) => (prev && prev.id === node.id && prev.pos === pos ? prev : { id: node.id, pos }))
+  }
+  const onDrop = (e, targetId) => {
+    e.preventDefault(); e.stopPropagation()
+    const pos = dropInfo?.pos || 'after'
+    const dId = dragId
+    if (dId && dId !== targetId) {
+      setData((d) => {
+        const dragged = findNode(d.nav, dId)
+        if (!dragged) return d
+        if (isGroup(dragged) && containsId(dragged, targetId)) return d // no dropping into own subtree
+        const without = removeNode(d.nav, dId).nav
+        return { ...d, nav: insertNode(without, targetId, pos, dragged) }
+      })
+    }
+    setDragId(null); setDropInfo(null)
+  }
+  const onDragEnd = () => { setDragId(null); setDropInfo(null) }
+
+  const tree = {
+    numbers, slides: data.slides, selectedId, onSelect: setSelectedId,
+    addGroup, addSlide: addSlideNode, rename: renameNode, del: deleteNode,
+    dragId, dropInfo, onDragStart, onDragOver, onDrop, onDragEnd,
   }
 
   // ---------- selected-slide mutations ----------
@@ -236,59 +248,35 @@ export default function Editor() {
         <aside className="editor-structure" style={{ width: structW, flexBasis: structW }}>
           <div className="panel-head">
             <span>구조</span>
-            <button onClick={addSection}>+ 섹션</button>
+            <span className="panel-head-actions">
+              <button onClick={() => addGroup(null)}>+ 그룹</button>
+              <button onClick={() => addSlideNode(null)}>+ 슬라이드</button>
+            </span>
+          </div>
+          <p className="ed-tree-hint">드래그해서 순서·그룹을 바꿀 수 있어요. 그룹 위에 떨어뜨리면 안으로 들어갑니다.</p>
+
+          <div className="ed-tree" onDragOver={(e) => e.preventDefault()}>
+            {(data.nav || []).map((node) => (
+              <EdNode key={node.id} node={node} depth={0} t={tree} />
+            ))}
           </div>
 
-          {(data.nav || []).map((section) => (
-            <div key={section.id} className="ed-section">
-              <div className="ed-section-head">
-                <input
-                  value={section.title}
-                  onChange={(e) => renameSection(section.id, e.target.value)}
-                />
-                <button title="섹션 삭제" onClick={() => deleteSection(section.id)}>✕</button>
-              </div>
-              {section.children.map((child, i) => (
-                <div
-                  key={child.id}
-                  className={'ed-slide-row' + (selectedId === child.id ? ' active' : '')}
-                  onClick={() => setSelectedId(child.id)}
-                >
-                  <span className="ed-slide-title">{data.slides[child.id]?.title || child.id}</span>
-                  <span className="ed-row-actions" onClick={(e) => e.stopPropagation()}>
-                    <button disabled={i === 0} onClick={() => moveSlide(section.id, i, -1)}>↑</button>
-                    <button disabled={i === section.children.length - 1} onClick={() => moveSlide(section.id, i, 1)}>↓</button>
-                    <select
-                      value={section.id}
-                      title="다른 섹션으로 이동"
-                      onChange={(e) => reassignSlide(child.id, section.id, e.target.value)}
-                    >
-                      {data.nav.map((s) => (
-                        <option key={s.id} value={s.id}>{s.title}</option>
-                      ))}
-                    </select>
-                    <button onClick={() => deleteSlide(child.id)}>✕</button>
-                  </span>
-                </div>
-              ))}
-              <button className="ed-add-slide" onClick={() => addSlide(section.id)}>+ 슬라이드</button>
-            </div>
-          ))}
-
+          {/* link-only slides (not in the nav tree) */}
           <div className="ed-section">
             <div className="ed-section-head static">
               <span>링크 전용 (네비 미포함)</span>
-              <button onClick={addAppendix}>+ 슬라이드</button>
+              <button onClick={addOrphan}>+ 슬라이드</button>
             </div>
-            {appendixIds.map((id) => (
+            {orphanIds.map((id) => (
               <div
                 key={id}
                 className={'ed-slide-row' + (selectedId === id ? ' active' : '')}
                 onClick={() => setSelectedId(id)}
               >
+                <span className="ed-thumb-sm">{data.slides[id] && <img src={imageSrcFor(data.slides[id])} alt="" loading="lazy" onError={imageFallback(data.slides[id])} />}</span>
                 <span className="ed-slide-title">{data.slides[id]?.title || id}</span>
                 <span className="ed-row-actions" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => deleteSlide(id)}>✕</button>
+                  <button onClick={() => deleteOrphan(id)}>✕</button>
                 </span>
               </div>
             ))}
@@ -521,3 +509,77 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
 }
 
 const round = (n) => Math.round(n * 10) / 10
+
+// ===================== Editor structure tree =====================
+function EdNode({ node, depth, t }) {
+  return isGroup(node) ? <EdGroup node={node} depth={depth} t={t} /> : <EdSlide node={node} depth={depth} t={t} />
+}
+
+function EdGroup({ node, depth, t }) {
+  const [open, setOpen] = useState(true)
+  const dropCls = t.dropInfo?.id === node.id ? ' drop-' + t.dropInfo.pos : ''
+  return (
+    <div className="ed-node">
+      <div
+        className={'ed-row ed-grouprow' + dropCls + (t.dragId === node.id ? ' dragging' : '')}
+        style={{ paddingLeft: 6 + depth * 14 }}
+        draggable
+        onDragStart={(e) => t.onDragStart(e, node.id)}
+        onDragOver={(e) => t.onDragOver(e, node, true)}
+        onDrop={(e) => t.onDrop(e, node.id)}
+        onDragEnd={t.onDragEnd}
+      >
+        <button className="ed-twist" onClick={() => setOpen((o) => !o)} title={open ? '접기' : '펼치기'}>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"
+            strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'none' : 'rotate(-90deg)' }}>
+            <path d="M4 6.5l4 4 4-4" />
+          </svg>
+        </button>
+        {t.numbers[node.id] && <span className="ed-num">{t.numbers[node.id]}</span>}
+        <input
+          className="ed-group-input"
+          value={node.title}
+          onChange={(e) => t.rename(node.id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        />
+        <span className="ed-row-actions">
+          <button title="하위 그룹 추가" onClick={() => t.addGroup(node.id)}>▢﹢</button>
+          <button title="슬라이드 추가" onClick={() => t.addSlide(node.id)}>﹢</button>
+          <button title="삭제" onClick={() => t.del(node)}>✕</button>
+        </span>
+      </div>
+      {open && (
+        <div className="ed-children">
+          {(node.children || []).map((c) => <EdNode key={c.id} node={c} depth={depth + 1} t={t} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EdSlide({ node, depth, t }) {
+  const ref = slideRef(node)
+  const slide = t.slides?.[ref]
+  const dropCls = t.dropInfo?.id === node.id ? ' drop-' + t.dropInfo.pos : ''
+  return (
+    <div className="ed-node">
+      <div
+        className={'ed-row ed-sliderow' + dropCls + (t.selectedId === ref ? ' active' : '') + (t.dragId === node.id ? ' dragging' : '')}
+        style={{ paddingLeft: 6 + depth * 14 }}
+        draggable
+        onDragStart={(e) => t.onDragStart(e, node.id)}
+        onDragOver={(e) => t.onDragOver(e, node, false)}
+        onDrop={(e) => t.onDrop(e, node.id)}
+        onDragEnd={t.onDragEnd}
+        onClick={() => t.onSelect(ref)}
+      >
+        <span className="ed-thumb-sm">{slide && <img src={imageSrcFor(slide)} alt="" loading="lazy" onError={imageFallback(slide)} />}</span>
+        <span className="ed-slide-title">{slide?.title || ref}</span>
+        <span className="ed-row-actions" onClick={(e) => e.stopPropagation()}>
+          <button title="삭제" onClick={() => t.del(node)}>✕</button>
+        </span>
+      </div>
+    </div>
+  )
+}

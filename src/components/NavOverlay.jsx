@@ -1,27 +1,15 @@
 import { NavLink } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
+import { groupNumbers } from '../lib/nav.js'
+import NavTree from './NavTree.jsx'
 
-// Frosted-glass quick-nav shown when hovering the open button while the sidebar
-// is collapsed.
+// Frosted-glass quick-nav shown when hovering the open button while collapsed.
 export default function NavOverlay({ onNavigate }) {
   const { data } = useData()
+  const numbers = groupNumbers(data.nav)
   return (
     <div className="nav-overlay">
-      {(data.nav || []).map((section) => (
-        <div className="no-section" key={section.id}>
-          <div className="no-label">{section.title}</div>
-          {(section.children || []).map((c) => (
-            <NavLink
-              key={c.id}
-              to={`/slide/${c.id}`}
-              onClick={onNavigate}
-              className={({ isActive }) => 'no-item' + (isActive ? ' active' : '')}
-            >
-              {data.slides?.[c.id]?.title || c.id}
-            </NavLink>
-          ))}
-        </div>
-      ))}
+      <NavTree nodes={data.nav} numbers={numbers} slides={data.slides} onNavigate={onNavigate} />
       {(data.demos || []).length > 0 && (
         <div className="no-section">
           <div className="no-label">라이브 시연</div>

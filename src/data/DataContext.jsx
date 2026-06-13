@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { deckSlideRefs } from '../lib/nav.js'
 
 const DataContext = createContext(null)
 const STORAGE_KEY = 'ux-report-data-v2'   // local unsaved draft (editor only)
@@ -109,18 +110,8 @@ export function DataProvider({ children }) {
 
   const importData = useCallback((json) => setData(json), [setData])
 
-  // Ordered slide ids for prev/next (appendix sections excluded from the main deck)
-  const orderedSlideIds = useMemo(() => {
-    if (!data) return []
-    const ids = []
-    for (const section of data.nav || []) {
-      if (section.kind === 'appendix') continue
-      for (const child of section.children || []) {
-        if (child.type === 'slide') ids.push(child.id)
-      }
-    }
-    return ids
-  }, [data])
+  // Ordered slide ids for prev/next (recursive; appendix groups excluded)
+  const orderedSlideIds = useMemo(() => (data ? deckSlideRefs(data.nav) : []), [data])
 
   const value = {
     data, setData, source, error,
