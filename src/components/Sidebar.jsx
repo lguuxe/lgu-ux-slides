@@ -39,7 +39,12 @@ export default function Sidebar({ onCollapse }) {
           {data.meta?.subtitle && <div className="sidebar-sub">{data.meta.subtitle}</div>}
         </div>
         {onCollapse && (
-          <button className="sidebar-collapse" onClick={onCollapse} title="사이드바 접기">«</button>
+          <button className="sidebar-collapse" onClick={onCollapse} title="사이드바 접기" aria-label="사이드바 접기">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 19C5 19.5523 4.55229 20 4 20C3.44772 20 3 19.5523 3 19L3 5C3 4.44772 3.44772 4 4 4C4.55229 4 5 4.44772 5 5L5 19Z" fill="currentColor"/>
+              <path d="M21 12C21 12.5523 20.5523 13 20 13L10.4141 13L13.207 15.793C13.5975 16.1835 13.5976 16.8165 13.207 17.207C12.8165 17.5975 12.1835 17.5975 11.793 17.207L7.29297 12.707C7.10549 12.5195 7.00005 12.2651 7 12C7.00001 11.7349 7.10553 11.4805 7.29297 11.293L11.793 6.79297C12.1835 6.40245 12.8165 6.40245 13.207 6.79297C13.5975 7.1835 13.5976 7.81651 13.207 8.20703L10.4141 11H20C20.5523 11 21 11.4477 21 12Z" fill="currentColor"/>
+            </svg>
+          </button>
         )}
       </div>
 
