@@ -165,14 +165,14 @@ function EditorInner() {
     const node = { id: uid('n'), ref }
     setData((d) => ({
       ...d,
-      slides: { ...d.slides, [ref]: { title: '새 슬라이드', image: '/slides/cover.svg', hotspots: [] } },
+      slides: { ...d.slides, [ref]: { title: '새 슬라이드', image: '/slides/default.png', hotspots: [] } },
       nav: parentId ? insertNode(d.nav, parentId, 'inside', node) : [...(d.nav || []), node],
     }))
     setSelectedId(ref)
   }
   const addOrphan = () => {
     const ref = uid('slide')
-    setData((d) => ({ ...d, slides: { ...d.slides, [ref]: { title: '새 슬라이드(링크 전용)', image: '/slides/cover.svg', hotspots: [] } } }))
+    setData((d) => ({ ...d, slides: { ...d.slides, [ref]: { title: '새 슬라이드(링크 전용)', image: '/slides/default.png', hotspots: [] } } }))
     setSelectedId(ref)
   }
   const renameNode = (nodeId, title) => setData((d) => ({ ...d, nav: updateNode(d.nav, nodeId, { title }) }))
