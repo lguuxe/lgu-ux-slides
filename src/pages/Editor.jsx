@@ -5,7 +5,7 @@ import { useData } from '../data/DataContext.jsx'
 const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4).toString(36)}`
 
 export default function Editor() {
-  const { data, setData, source, resetToFile, importData } = useData()
+  const { data, setData, source, resetToPublished, importData, publish } = useData()
   const [selectedId, setSelectedId] = useState(() => {
     const first = data.nav?.[0]?.children?.[0]?.id
     return first || Object.keys(data.slides || {})[0] || null
@@ -125,6 +125,23 @@ export default function Editor() {
     a.click()
     URL.revokeObjectURL(url)
   }
+  // Publish the current draft to the server (Netlify Blobs) for all visitors
+  const publishToServer = async () => {
+    let pw = sessionStorage.getItem('edit-pw')
+    if (!pw) {
+      pw = prompt('편집 비밀번호를 입력하세요:')
+      if (!pw) return
+    }
+    try {
+      await publish(pw)
+      sessionStorage.setItem('edit-pw', pw)
+      alert('게시 완료! 새로고침하면 모든 사용자에게 반영됩니다.')
+    } catch (e) {
+      sessionStorage.removeItem('edit-pw')
+      alert('게시 실패: ' + e.message)
+    }
+  }
+
   // Trigger a Netlify rebuild → re-captures all Figma frames with the latest state
   const redeploy = async () => {
     let hook = localStorage.getItem('netlify-build-hook')
@@ -166,15 +183,20 @@ export default function Editor() {
         <Link to="/" className="back-to-show">← 발표 보기</Link>
         <h1>편집 모드</h1>
         <span className={`src-badge ${source}`}>
-          {source === 'local' ? '● 로컬 편집본 (이 브라우저에 저장됨)' : '○ 배포본(slides.json)'}
+          {source === 'local'
+            ? '● 미게시 초안 (이 브라우저)'
+            : source === 'server'
+            ? '○ 게시본 (서버)'
+            : '○ 기본본 (slides.json)'}
         </span>
         <div className="editor-top-actions">
+          <button className="publish-btn" onClick={publishToServer} title="서버(Netlify Blobs)에 저장 → 모든 사용자에게 반영">☁ 서버에 게시</button>
           <button onClick={redeploy} title="Netlify 재배포 → Figma 프레임 최신 상태로 다시 캡쳐">⟳ Figma 캡쳐·재배포</button>
-          <button onClick={exportJson}>⬇ slides.json 내보내기</button>
+          <button onClick={exportJson}>⬇ 내보내기</button>
           <button onClick={() => fileInputRef.current?.click()}>⬆ 불러오기</button>
           <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={onImport} />
-          <button className="danger" onClick={() => confirm('로컬 편집본을 버리고 배포본으로 되돌릴까요?') && resetToFile()}>
-            ↺ 배포본으로 초기화
+          <button className="danger" onClick={() => confirm('미게시 초안을 버리고 게시본을 다시 불러올까요?') && resetToPublished()}>
+            ↺ 게시본 불러오기
           </button>
         </div>
       </header>

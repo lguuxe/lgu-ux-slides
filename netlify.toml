@@ -4,6 +4,9 @@
   command = "npm run capture && npm run build"
   publish = "dist"
 
+[functions]
+  directory = "netlify/functions"
+
 # SPA fallback so deep links / refreshes resolve to index.html
 [[redirects]]
   from = "/*"

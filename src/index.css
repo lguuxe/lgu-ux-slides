@@ -243,6 +243,8 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   padding: 8px 14px; border-radius: var(--pill); cursor: pointer; font-size: 12px; transition: border-color .15s;
 }
 .editor-top-actions button:hover { border-color: rgba(255,255,255,.5); }
+.editor-top-actions .publish-btn { background: var(--ink); color: var(--canvas); border-color: var(--ink); }
+.editor-top-actions .publish-btn:hover { background: #e6e6e6; border-color: #e6e6e6; }
 button.danger { color: var(--body); }
 
 .editor-body { flex: 1; display: flex; min-height: 0; }
