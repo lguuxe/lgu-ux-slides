@@ -48,6 +48,37 @@ export default function Sidebar({ onCollapse }) {
   const toggle = (id) =>
     setCollapsed((c) => ({ ...c, [id]: !c[id] }))
 
+  const renderSection = (section) => {
+    const isCollapsed = collapsed[section.id]
+    const isAppendix = section.kind === 'appendix'
+    return (
+      <div key={section.id} className={'nav-section' + (isAppendix ? ' appendix' : '')}>
+        <button className="nav-section-title" onClick={() => toggle(section.id)}>
+          {isAppendix && <span className="ns-icon"><AppendixIcon /></span>}
+          <span className="ns-text">{section.title}</span>
+          <ChevronIcon className={'ns-chevron' + (isCollapsed ? ' closed' : '')} />
+        </button>
+        {!isCollapsed && (
+          <ul className="nav-list">
+            {(section.children || []).map((child) => (
+              <li key={child.id}>
+                <NavLink
+                  to={`/slide/${child.id}`}
+                  className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
+                >
+                  {data.slides?.[child.id]?.title || child.id}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
+  }
+
+  const mainSections = (data.nav || []).filter((s) => s.kind !== 'appendix')
+  const appendixSections = (data.nav || []).filter((s) => s.kind === 'appendix')
+
   return (
     <aside className="sidebar">
       <div className="sidebar-head">
@@ -62,39 +93,14 @@ export default function Sidebar({ onCollapse }) {
         )}
       </div>
 
-      <nav className="nav">
-        {(data.nav || []).map((section) => {
-          const isCollapsed = collapsed[section.id]
-          const isAppendix = section.kind === 'appendix'
-          return (
-            <div key={section.id} className={'nav-section' + (isAppendix ? ' appendix' : '')}>
-              <button className="nav-section-title" onClick={() => toggle(section.id)}>
-                {isAppendix && <span className="ns-icon"><AppendixIcon /></span>}
-                <span className="ns-text">{section.title}</span>
-                <ChevronIcon className={'ns-chevron' + (isCollapsed ? ' closed' : '')} />
-              </button>
-              {!isCollapsed && (
-                <ul className="nav-list">
-                  {(section.children || []).map((child) => {
-                    const slide = data.slides?.[child.id]
-                    return (
-                      <li key={child.id}>
-                        <NavLink
-                          to={`/slide/${child.id}`}
-                          className={({ isActive }) =>
-                            'nav-item' + (isActive ? ' active' : '')
-                          }
-                        >
-                          {slide?.title || child.id}
-                        </NavLink>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </div>
-          )
-        })}
+      {/* scrollable middle: main sections only */}
+      <nav className="nav nav-scroll">
+        {mainSections.map(renderSection)}
+      </nav>
+
+      {/* fixed bottom: appendix + live demos */}
+      <div className="nav-fixed">
+        {appendixSections.map(renderSection)}
 
         {(data.demos || []).length > 0 && (
           <div className="nav-section gnb">
@@ -119,7 +125,7 @@ export default function Sidebar({ onCollapse }) {
             </ul>
           </div>
         )}
-      </nav>
+      </div>
 
       <div className="sidebar-foot">
         <Link to="/admin" className="admin-link">
