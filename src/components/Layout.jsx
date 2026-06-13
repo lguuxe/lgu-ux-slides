@@ -10,29 +10,41 @@ export default function Layout() {
   const closeTimer = useRef(null)
   const hideTimer = useRef(null)
 
-  const openMenu = () => { clearTimeout(closeTimer.current); setMenuOpen(true) }
-  const scheduleClose = () => { closeTimer.current = setTimeout(() => setMenuOpen(false), 160) }
+  const menuOpenRef = useRef(false)
+  menuOpenRef.current = menuOpen
+
+  const showChrome = () => { clearTimeout(hideTimer.current); setChromeHidden(false) }
+  const scheduleHide = (delay) => {
+    clearTimeout(hideTimer.current)
+    hideTimer.current = setTimeout(() => { if (!menuOpenRef.current) setChromeHidden(true) }, delay)
+  }
+
+  const openMenu = () => { clearTimeout(closeTimer.current); showChrome(); setMenuOpen(true) }
+  const scheduleClose = () => {
+    closeTimer.current = setTimeout(() => { setMenuOpen(false); scheduleHide(500) }, 160)
+  }
   const openSidebar = () => { clearTimeout(closeTimer.current); setMenuOpen(false); setNavOpen(true) }
   const collapseSidebar = () => { clearTimeout(closeTimer.current); setMenuOpen(false); setNavOpen(false) }
 
-  // auto-hide the top chrome (toolbar + open button) after 2s of no movement,
-  // only while the sidebar is collapsed; reveal on mouse move.
-  const poke = () => {
-    if (chromeHidden) setChromeHidden(false)
-    clearTimeout(hideTimer.current)
-    if (!navOpen) hideTimer.current = setTimeout(() => setChromeHidden(true), 2000)
+  // collapsed presentation mode: top chrome appears only when the cursor goes to
+  // the top edge of the screen, and hides shortly after it leaves.
+  const onMouseMove = (e) => {
+    if (navOpen) return
+    if (e.clientY <= 72) showChrome()
+    else if (!menuOpenRef.current && !chromeHidden) scheduleHide(500)
   }
   useEffect(() => {
     clearTimeout(hideTimer.current)
-    if (navOpen) { setChromeHidden(false) }
-    else { hideTimer.current = setTimeout(() => setChromeHidden(true), 2000) }
+    if (navOpen) setChromeHidden(false)
+    else scheduleHide(1000) // show briefly on entering, then hide
     return () => clearTimeout(hideTimer.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navOpen])
 
   return (
     <div
       className={'layout' + (navOpen ? '' : ' nav-collapsed') + (chromeHidden && !navOpen ? ' chrome-hidden' : '')}
-      onMouseMove={poke}
+      onMouseMove={onMouseMove}
     >
       <Sidebar onCollapse={collapseSidebar} />
       {!navOpen && (
