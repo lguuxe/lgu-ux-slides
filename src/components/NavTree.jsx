@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { isGroup, slideRef } from '../lib/nav.js'
 import { imageSrcFor, imageFallback } from '../lib/images.js'
 
@@ -32,8 +32,18 @@ function GroupNode({ node, depth, numbers, slides, onNavigate, thumbnails }) {
 function SlideNode({ node, depth, slides, onNavigate, thumbnails }) {
   const ref = slideRef(node)
   const slide = slides?.[ref]
+  const location = useLocation()
+  const active = location.pathname === `/slide/${ref}`
+  const elRef = useRef(null)
+
+  // keep the active slide scrolled into view as you navigate the deck
+  useEffect(() => {
+    if (active && elRef.current) elRef.current.scrollIntoView({ block: 'nearest' })
+  }, [active])
+
   return (
     <NavLink
+      ref={elRef}
       to={`/slide/${ref}`}
       onClick={onNavigate}
       className={({ isActive }) => 'nt-slide' + (isActive ? ' active' : '')}
