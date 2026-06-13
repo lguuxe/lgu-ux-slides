@@ -3,6 +3,9 @@
 피그마 슬라이드(이미지) 위에 클릭영역(hotspot)을 얹어 링크로 연결하고, 개발된 웹 서비스를
 사이트 안 iframe으로 시연할 수 있는 발표용 SPA입니다.
 
+- **라이브**: https://lgu-ux-slides.netlify.app  (편집: `/admin`)
+- **저장소**: https://github.com/lguuxe/lgu-ux-slides  (`main` push → Netlify 자동 재배포)
+
 ## 실행
 
 ```bash
