@@ -1,14 +1,13 @@
 /**
- * Figma frame image, cached in Netlify Blobs.
+ * Figma frame image with a draft → published flow, stored in Netlify Blobs.
  *
- *   GET /.netlify/functions/figma-image?url=<encoded figma frame url>
- *   GET /.netlify/functions/figma-image?url=...&refresh=1   ← re-render from Figma
+ *   GET ?url=...            → published copy   (viewer/presentation; fast, no Figma)
+ *   GET ?url=...&draft=1    → draft||published (editor preview)
+ *   GET ?url=...&refresh=1  → render fresh from Figma into the DRAFT (편집 「적용」/최신화)
  *
- * Default (viewer) path: serve the stored copy from Blobs — fast, persistent, and
- * independent of Figma at view time (good for a live presentation). The image is
- * fetched from Figma only the first time a frame is seen, or when `refresh=1` is
- * requested (the editor uses that when opening a slide / pressing «적용»). So a
- * Figma edit shows up after it's re-captured from the editor, not on every load.
+ * «적용» renders into the draft (not yet visible to viewers). «저장» (the slides
+ * function) promotes drafts → published. So viewers always serve the published
+ * copy from storage — instant and independent of Figma at view time.
  */
 import { getStore } from '@netlify/blobs'
 
@@ -46,36 +45,56 @@ async function renderFromFigma(parsed, token) {
 export default async (req) => {
   const params = new URL(req.url).searchParams
   const figmaUrl = params.get('url')
-  const forceRefresh = params.get('refresh') === '1'
+  const refresh = params.get('refresh') === '1'
+  const preferDraft = params.get('draft') === '1'
   const parsed = figmaUrl && parseFigmaUrl(figmaUrl)
   if (!parsed) return new Response('invalid figma url', { status: 400 })
 
-  const cacheKey = `${parsed.fileKey}__${parsed.nodeId}`.replace(/:/g, '-')
+  const k = `${parsed.fileKey}__${parsed.nodeId}`.replace(/:/g, '-')
+  const PUB = `pub__${k}`
+  const DRAFT = `draft__${k}`
   const store = getStore('figma-img')
   const token = process.env.FIGMA_TOKEN
 
-  // 1) viewer path: serve the stored copy as-is
-  if (!forceRefresh) {
-    const cached = await store.get(cacheKey, { type: 'arrayBuffer' })
-    if (cached) return png(Buffer.from(cached), 'public, max-age=300')
+  const getBlob = async (key) => store.get(key, { type: 'arrayBuffer' })
+
+  // 「적용」/최신화: render fresh from Figma into the draft
+  if (refresh) {
+    if (token) {
+      try {
+        const ab = await renderFromFigma(parsed, token)
+        if (ab) { await store.set(DRAFT, ab); return png(Buffer.from(ab), 'no-store') }
+      } catch { /* fall through */ }
+    }
+    const d = (await getBlob(DRAFT)) || (await getBlob(PUB))
+    if (d) return png(Buffer.from(d), 'no-store')
+    return new Response('render failed', { status: 502 })
   }
 
-  // 2) (re)capture from Figma and persist
+  // editor preview: draft if present, else published
+  if (preferDraft) {
+    const d = (await getBlob(DRAFT)) || (await getBlob(PUB))
+    if (d) return png(Buffer.from(d), 'public, max-age=30')
+    if (token) {
+      try {
+        const ab = await renderFromFigma(parsed, token)
+        if (ab) { await store.set(DRAFT, ab); return png(Buffer.from(ab), 'no-store') }
+      } catch { /* ignore */ }
+    }
+    return new Response('unavailable', { status: 502 })
+  }
+
+  // viewer/presentation: published copy
+  const pub = await getBlob(PUB)
+  if (pub) return png(Buffer.from(pub), 'public, max-age=300')
+  // self-heal first view: render → published
   if (token) {
     try {
       const ab = await renderFromFigma(parsed, token)
-      if (ab) {
-        await store.set(cacheKey, ab)
-        return png(Buffer.from(ab), forceRefresh ? 'no-store' : 'public, max-age=300')
-      }
-    } catch {
-      // fall through to any stored copy
-    }
+      if (ab) { await store.set(PUB, ab); return png(Buffer.from(ab), 'public, max-age=300') }
+    } catch { /* ignore */ }
   }
-
-  // 3) last resort: stored copy even when a refresh was requested but Figma failed
-  const cached = await store.get(cacheKey, { type: 'arrayBuffer' })
-  if (cached) return png(Buffer.from(cached), 'public, max-age=60')
-
-  return new Response('figma image unavailable', { status: 502 })
+  const d = await getBlob(DRAFT)
+  if (d) return png(Buffer.from(d), 'public, max-age=60')
+  return new Response('unavailable', { status: 502 })
 }

@@ -166,6 +166,31 @@ export default function Editor() {
     }
   }
 
+  const [refreshing, setRefreshing] = useState(false)
+
+  // Pull the latest Figma state for every Figma-linked slide (into drafts).
+  // The user then presses 저장 to publish them to viewers.
+  const refreshFigma = async () => {
+    const urls = Object.values(data.slides || {}).map((s) => s.figmaUrl).filter(Boolean)
+    if (!urls.length) return alert('Figma 링크가 있는 슬라이드가 없습니다.')
+    if (!confirm(`Figma 링크 ${urls.length}개를 최신 상태로 다시 캡쳐할까요?\n(완료 후 「저장」을 눌러야 발표 화면에 반영됩니다.)`)) return
+    setRefreshing(true)
+    try {
+      const t = Date.now()
+      const results = await Promise.allSettled(
+        urls.map((u) => fetch(imageSrcFor({ figmaUrl: u }, { refresh: true, bust: t })))
+      )
+      const ok = results.filter((r) => r.status === 'fulfilled' && r.value.ok).length
+      // touch data so it's marked unsaved (drafts updated, JSON unchanged)
+      setData((d) => ({ ...d }))
+      alert(`최신 캡쳐 완료: ${ok}/${urls.length}. 「저장」을 누르면 발표 화면에 반영됩니다.`)
+    } catch (e) {
+      alert('최신화 실패: ' + e.message)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const onImport = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -187,13 +212,16 @@ export default function Editor() {
       <header className="editor-top">
         <Link to="/" className="back-to-show">← 발표 보기</Link>
         <h1>편집 모드</h1>
-        <button className="save-btn" onClick={save} disabled={saving || source !== 'local'}>
-          {saving ? '저장 중…' : source === 'local' ? '저장' : '저장됨'}
+        <button className="save-btn" onClick={save} disabled={saving}>
+          {saving ? '저장 중…' : '저장'}
         </button>
         <span className={`src-badge ${source}`}>
           {source === 'local' ? '● 저장 안 된 변경' : ''}
         </span>
         <div className="editor-top-actions">
+          <button onClick={refreshFigma} disabled={refreshing} title="모든 Figma 링크를 최신 상태로 다시 캡쳐(이후 저장 필요)">
+            {refreshing ? '최신화 중…' : '⟳ Figma 최신화'}
+          </button>
           <button onClick={exportJson} title="백업 파일로 내보내기">⬇ 내보내기</button>
           <button onClick={() => fileInputRef.current?.click()} title="백업 파일 불러오기">⬆ 불러오기</button>
           <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={onImport} />
@@ -309,16 +337,21 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
   const canvasRef = useRef(null)
   const [draft, setDraft] = useState(null) // rectangle being drawn
   const [selectedHs, setSelectedHs] = useState(null)
-  const [previewBust, setPreviewBust] = useState(() => Date.now()) // force-refresh figma preview
   const [linkInput, setLinkInput] = useState(slide.figmaUrl || '')
   const [loading, setLoading] = useState(() => !!slide.figmaUrl)
+  const [imgSrc, setImgSrc] = useState(() => imageSrcFor(slide, { draft: true }))
 
-  // commit the typed Figma link → refresh the preview (with a loading spinner)
+  // 「적용」: capture the typed link from Figma into the draft (preview only, not yet saved)
   const applyLink = () => {
     const url = linkInput.trim()
     updateSlide({ figmaUrl: url || undefined })
-    setPreviewBust(Date.now())
-    setLoading(!!url)
+    if (url) {
+      setLoading(true)
+      setImgSrc(imageSrcFor({ figmaUrl: url }, { refresh: true, bust: Date.now() }))
+    } else {
+      setLoading(false)
+      setImgSrc(slide.image || '')
+    }
   }
 
   const pctFromEvent = (e) => {
@@ -408,7 +441,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
           onMouseLeave={() => draft && setDraft(null)}
         >
           <img
-            src={imageSrcFor(slide, { bust: slide.figmaUrl ? previewBust : undefined, refresh: true })}
+            src={imgSrc}
             alt={slide.title}
             draggable={false}
             onLoad={() => setLoading(false)}

@@ -4,7 +4,8 @@
 export function imageSrcFor(slide, opts = {}) {
   if (slide?.figmaUrl) {
     let url = `/.netlify/functions/figma-image?url=${encodeURIComponent(slide.figmaUrl)}`
-    if (opts.refresh) url += '&refresh=1' // editor: re-capture from Figma + store in Blobs
+    if (opts.refresh) url += '&refresh=1'    // 적용/최신화: re-capture into draft
+    else if (opts.draft) url += '&draft=1'   // editor preview: draft||published
     if (opts.bust) url += `&t=${opts.bust}`
     return url
   }

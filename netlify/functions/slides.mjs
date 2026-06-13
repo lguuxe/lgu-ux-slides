@@ -12,6 +12,33 @@ import { getStore } from '@netlify/blobs'
 const STORE = 'ux-report'
 const KEY = 'slides'
 
+function parseFigmaUrl(url) {
+  try {
+    const u = new URL(url)
+    const m = u.pathname.match(/\/(?:file|design|proto)\/([A-Za-z0-9]+)/)
+    const fileKey = m && m[1]
+    let nodeId = u.searchParams.get('node-id')
+    if (nodeId) nodeId = decodeURIComponent(nodeId).replace(/-/g, ':')
+    if (!fileKey || !nodeId) return null
+    return { fileKey, nodeId }
+  } catch {
+    return null
+  }
+}
+
+// On save, promote each Figma slide's draft capture → published copy.
+async function promoteFigmaDrafts(slides) {
+  const imgStore = getStore('figma-img')
+  for (const slide of Object.values(slides || {})) {
+    if (!slide.figmaUrl) continue
+    const parsed = parseFigmaUrl(slide.figmaUrl)
+    if (!parsed) continue
+    const k = `${parsed.fileKey}__${parsed.nodeId}`.replace(/:/g, '-')
+    const draft = await imgStore.get(`draft__${k}`, { type: 'arrayBuffer' })
+    if (draft) await imgStore.set(`pub__${k}`, draft)
+  }
+}
+
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -45,6 +72,7 @@ export default async (req) => {
     }
 
     await store.setJSON(KEY, body)
+    await promoteFigmaDrafts(body.slides)
     return json({ ok: true, savedAt: new Date().toISOString() })
   }
 
