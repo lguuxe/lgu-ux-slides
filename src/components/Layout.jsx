@@ -12,32 +12,34 @@ export default function Layout() {
 
   const menuOpenRef = useRef(false)
   menuOpenRef.current = menuOpen
+  const HIDE_DELAY = 1000
 
-  const showChrome = () => { clearTimeout(hideTimer.current); setChromeHidden(false) }
-  const scheduleHide = (delay) => {
+  // show the chrome and (re)arm a 1s auto-hide (unless the nav menu is open)
+  const showChrome = () => {
+    setChromeHidden(false)
     clearTimeout(hideTimer.current)
-    hideTimer.current = setTimeout(() => { if (!menuOpenRef.current) setChromeHidden(true) }, delay)
+    hideTimer.current = setTimeout(() => { if (!menuOpenRef.current) setChromeHidden(true) }, HIDE_DELAY)
   }
 
-  const openMenu = () => { clearTimeout(closeTimer.current); showChrome(); setMenuOpen(true) }
+  const openMenu = () => { clearTimeout(closeTimer.current); clearTimeout(hideTimer.current); setChromeHidden(false); setMenuOpen(true) }
   const scheduleClose = () => {
-    closeTimer.current = setTimeout(() => { setMenuOpen(false); scheduleHide(500) }, 160)
+    closeTimer.current = setTimeout(() => { setMenuOpen(false); showChrome() }, 160)
   }
   const openSidebar = () => { clearTimeout(closeTimer.current); setMenuOpen(false); setNavOpen(true) }
   const collapseSidebar = () => { clearTimeout(closeTimer.current); setMenuOpen(false); setNavOpen(false) }
 
-  // collapsed presentation mode: top chrome appears only when the cursor goes to
-  // the top edge of the screen, and hides shortly after it leaves.
+  // collapsed presentation mode: chrome appears when the cursor hits the very top
+  // edge (≤12px) — over slides via mousemove, over the demo iframe via the trigger
+  // strip — and stays while moving within the toolbar area (≤72px).
   const onMouseMove = (e) => {
     if (navOpen) return
-    if (e.clientY <= 12) showChrome() // trigger only at the very top edge
-    else if (e.clientY > 72 && !menuOpenRef.current && !chromeHidden) scheduleHide(500)
-    // between 12–72px: leave as-is so you can reach the revealed toolbar
+    if (e.clientY <= 12) showChrome()
+    else if (e.clientY <= 72 && !chromeHidden) showChrome()
   }
   useEffect(() => {
     clearTimeout(hideTimer.current)
     if (navOpen) setChromeHidden(false)
-    else scheduleHide(1000) // show briefly on entering, then hide
+    else hideTimer.current = setTimeout(() => { if (!menuOpenRef.current) setChromeHidden(true) }, HIDE_DELAY)
     return () => clearTimeout(hideTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navOpen])
@@ -48,6 +50,7 @@ export default function Layout() {
       onMouseMove={onMouseMove}
     >
       <Sidebar onCollapse={collapseSidebar} />
+      {!navOpen && <div className="chrome-trigger" onMouseEnter={showChrome} />}
       {!navOpen && (
         <div className="nav-pop" onMouseEnter={openMenu} onMouseLeave={scheduleClose}>
           <button className="nav-reopen" onClick={openSidebar} title="사이드바 열기">
