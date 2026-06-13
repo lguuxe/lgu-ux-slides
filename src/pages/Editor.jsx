@@ -426,9 +426,9 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
       </div>
 
       <p className="se-hint">
-        Figma 링크를 넣고 <b>«적용»</b>을 누르면 아래 이미지가 <b>그 프레임의 최신 캡쳐</b>로 바뀝니다(피그마에서 수정하면 자동 반영).
+        Figma 링크를 넣고 <b>«적용»</b>을 누르면 아래 미리보기가 그 프레임 캡쳐로 바뀝니다(아직 미게시).
+        <b>저장</b>을 눌러야 발표 화면에 반영됩니다. · 피그마에서 디자인을 수정했다면 우상단 <b>«⟳ Figma 최신화»</b> 로 모두 다시 가져온 뒤 저장하세요.
         · 이미지 위에서 <b>드래그</b>하면 클릭영역(링크)이 만들어지고, 만든 영역을 클릭하면 아래에서 링크 대상을 지정할 수 있어요.
-        · 변경 후 좌측 상단 <b>저장</b>을 눌러야 모두에게 반영됩니다.
       </p>
 
       <div className="se-canvas-scroll">
