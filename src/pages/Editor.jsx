@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
+import { imageSrcFor, imageFallback } from '../lib/images.js'
 
 const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4).toString(36)}`
 
@@ -125,39 +126,24 @@ export default function Editor() {
     a.click()
     URL.revokeObjectURL(url)
   }
-  // Publish the current draft to the server (Netlify Blobs) for all visitors
-  const publishToServer = async () => {
+  const [saving, setSaving] = useState(false)
+
+  // Save = publish the current data to the server (Netlify Blobs) for all visitors.
+  const save = async () => {
     let pw = sessionStorage.getItem('edit-pw')
     if (!pw) {
       pw = prompt('편집 비밀번호를 입력하세요:')
       if (!pw) return
     }
+    setSaving(true)
     try {
       await publish(pw)
       sessionStorage.setItem('edit-pw', pw)
-      alert('게시 완료! 새로고침하면 모든 사용자에게 반영됩니다.')
     } catch (e) {
       sessionStorage.removeItem('edit-pw')
-      alert('게시 실패: ' + e.message)
-    }
-  }
-
-  // Trigger a Netlify rebuild → re-captures all Figma frames with the latest state
-  const redeploy = async () => {
-    let hook = localStorage.getItem('netlify-build-hook')
-    if (!hook) {
-      hook = prompt(
-        'Netlify Build Hook URL을 붙여넣으세요.\n' +
-        '(Netlify → Site configuration → Build & deploy → Build hooks 에서 생성)'
-      )
-      if (!hook) return
-      localStorage.setItem('netlify-build-hook', hook.trim())
-    }
-    try {
-      await fetch(hook, { method: 'POST', mode: 'no-cors' })
-      alert('재배포를 시작했습니다. 1~2분 후 Figma 최신 캡쳐가 반영됩니다.')
-    } catch (e) {
-      alert('재배포 요청 중 오류: ' + e)
+      alert('저장 실패: ' + e.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -182,21 +168,18 @@ export default function Editor() {
       <header className="editor-top">
         <Link to="/" className="back-to-show">← 발표 보기</Link>
         <h1>편집 모드</h1>
+        <button className="save-btn" onClick={save} disabled={saving || source !== 'local'}>
+          {saving ? '저장 중…' : source === 'local' ? '저장' : '저장됨'}
+        </button>
         <span className={`src-badge ${source}`}>
-          {source === 'local'
-            ? '● 미게시 초안 (이 브라우저)'
-            : source === 'server'
-            ? '○ 게시본 (서버)'
-            : '○ 기본본 (slides.json)'}
+          {source === 'local' ? '● 저장 안 된 변경' : ''}
         </span>
         <div className="editor-top-actions">
-          <button className="publish-btn" onClick={publishToServer} title="서버(Netlify Blobs)에 저장 → 모든 사용자에게 반영">☁ 서버에 게시</button>
-          <button onClick={redeploy} title="Netlify 재배포 → Figma 프레임 최신 상태로 다시 캡쳐">⟳ Figma 캡쳐·재배포</button>
-          <button onClick={exportJson}>⬇ 내보내기</button>
-          <button onClick={() => fileInputRef.current?.click()}>⬆ 불러오기</button>
+          <button onClick={exportJson} title="백업 파일로 내보내기">⬇ 내보내기</button>
+          <button onClick={() => fileInputRef.current?.click()} title="백업 파일 불러오기">⬆ 불러오기</button>
           <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={onImport} />
-          <button className="danger" onClick={() => confirm('미게시 초안을 버리고 게시본을 다시 불러올까요?') && resetToPublished()}>
-            ↺ 게시본 불러오기
+          <button className="danger" onClick={() => confirm('저장 안 된 변경을 버리고 마지막 저장본을 불러올까요?') && resetToPublished()}>
+            ↺ 되돌리기
           </button>
         </div>
       </header>
@@ -305,6 +288,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
   const canvasRef = useRef(null)
   const [draft, setDraft] = useState(null) // rectangle being drawn
   const [selectedHs, setSelectedHs] = useState(null)
+  const [previewBust, setPreviewBust] = useState(() => Date.now()) // force-refresh figma preview
 
   const pctFromEvent = (e) => {
     const rect = canvasRef.current.getBoundingClientRect()
@@ -357,7 +341,6 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
     <div className="slide-editor">
       <div className="se-fields">
         <label>제목 <input value={slide.title} onChange={(e) => updateSlide({ title: e.target.value })} /></label>
-        <label>이미지 경로 <input value={slide.image} onChange={(e) => updateSlide({ image: e.target.value })} /></label>
         <span className="se-id">id: {slideId}</span>
       </div>
       <div className="se-fields">
@@ -365,16 +348,20 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
           Figma 프레임 링크
           <input
             value={slide.figmaUrl || ''}
-            onChange={(e) => updateSlide({ figmaUrl: e.target.value })}
-            placeholder="https://www.figma.com/design/…?node-id=1-23  (비우면 위 이미지 경로 사용)"
+            onChange={(e) => { updateSlide({ figmaUrl: e.target.value }); setPreviewBust(Date.now()) }}
+            placeholder="https://www.figma.com/design/…?node-id=1-23  (붙여넣으면 아래 미리보기가 바로 바뀝니다)"
             style={{ width: '100%' }}
           />
         </label>
+        {!slide.figmaUrl && (
+          <label>이미지 경로 <input value={slide.image || ''} onChange={(e) => updateSlide({ image: e.target.value })} placeholder="/slides/…" /></label>
+        )}
       </div>
 
       <p className="se-hint">
-        Figma 링크를 넣으면 <b>재배포 시 그 프레임을 캡쳐해</b> 위 이미지로 자동 교체됩니다(피그마에서 수정 후 «⟳ Figma 캡쳐·재배포»).
+        Figma 링크를 넣으면 아래 이미지가 <b>그 프레임의 최신 캡쳐</b>로 표시됩니다(피그마에서 수정하면 자동 반영).
         · 이미지 위에서 <b>드래그</b>하면 클릭영역(링크)이 만들어지고, 만든 영역을 클릭하면 아래에서 링크 대상을 지정할 수 있어요.
+        · 변경 후 좌측 상단 <b>저장</b>을 눌러야 모두에게 반영됩니다.
       </p>
 
       <div className="se-canvas-scroll">
@@ -386,7 +373,12 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
           onMouseUp={onMouseUp}
           onMouseLeave={() => draft && setDraft(null)}
         >
-          <img src={slide.image} alt={slide.title} draggable={false} />
+          <img
+            src={imageSrcFor(slide, { bust: slide.figmaUrl ? previewBust : undefined })}
+            alt={slide.title}
+            draggable={false}
+            onError={imageFallback(slide)}
+          />
           {(slide.hotspots || []).map((hs) => (
             <div
               key={hs.id}

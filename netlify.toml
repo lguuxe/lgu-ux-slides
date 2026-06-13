@@ -1,7 +1,7 @@
 [build]
-  # capture runs first: renders Figma frames (needs FIGMA_TOKEN env var) into
-  # public/slides, then vite builds. capture no-ops gracefully if no token.
-  command = "npm run capture && npm run build"
+  # Figma frames are rendered live at runtime by the figma-image function
+  # (needs FIGMA_TOKEN env var), so the build is just the static site.
+  command = "npm run build"
   publish = "dist"
 
 [functions]

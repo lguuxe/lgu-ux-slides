@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
+import { imageSrcFor, imageFallback } from '../lib/images.js'
 import Hotspot from './Hotspot.jsx'
 import BackButton from './BackButton.jsx'
 
@@ -46,7 +47,7 @@ export default function SlideView({ slideId }) {
 
       <div className="slide-scroll">
         <div className="slide-canvas">
-          <img src={slide.image} alt={slide.title} draggable={false} />
+          <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
           {(slide.hotspots || []).map((hs) => (
             <Hotspot key={hs.id} hotspot={hs} />
           ))}
