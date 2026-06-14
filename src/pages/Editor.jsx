@@ -176,6 +176,7 @@ function EditorInner() {
     setSelectedId(ref)
   }
   const renameNode = (nodeId, title) => setData((d) => ({ ...d, nav: updateNode(d.nav, nodeId, { title }) }))
+  const renameSlide = (ref, title) => setData((d) => ({ ...d, slides: { ...d.slides, [ref]: { ...d.slides[ref], title } } }))
   const updateMeta = (patch) => setData((d) => ({ ...d, meta: { ...(d.meta || {}), ...patch } }))
 
   const deleteNode = (node) => {
@@ -236,7 +237,7 @@ function EditorInner() {
 
   const tree = {
     numbers, slides: data.slides, selectedId, onSelect: setSelectedId,
-    addGroup, addSlide: addSlideNode, rename: renameNode, del: deleteNode,
+    addGroup, addSlide: addSlideNode, rename: renameNode, renameSlide, del: deleteNode,
     dragId, dropInfo, onDragStart, onDragOver, onDrop, onDragEnd,
   }
 
@@ -678,20 +679,48 @@ function EdSlide({ node, depth, t }) {
   const ref = slideRef(node)
   const slide = t.slides?.[ref]
   const dropCls = t.dropInfo?.id === node.id ? ' drop-' + t.dropInfo.pos : ''
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState('')
+
+  const startEdit = () => { setVal(slide?.title || ''); setEditing(true) }
+  const commit = () => { t.renameSlide(ref, val.trim() || (slide?.title || ref)); setEditing(false) }
+
   return (
     <div className="ed-node">
       <div
         className={'ed-row ed-sliderow' + dropCls + (t.selectedId === ref ? ' active' : '') + (t.dragId === node.id ? ' dragging' : '')}
         style={{ paddingLeft: 6 + depth * 14 }}
-        draggable
+        draggable={!editing}
         onDragStart={(e) => t.onDragStart(e, node.id)}
         onDragOver={(e) => t.onDragOver(e, node, false)}
         onDrop={(e) => t.onDrop(e, node.id)}
         onDragEnd={t.onDragEnd}
-        onClick={() => t.onSelect(ref)}
+        onClick={() => { if (!editing) t.onSelect(ref) }}
       >
         <span className="ed-thumb-sm">{slide && <img src={imageSrcFor(slide, { thumb: true })} alt="" loading="lazy" onError={imageFallback(slide)} />}</span>
-        <span className="ed-slide-title">{slide?.title || ref}</span>
+        {editing ? (
+          <input
+            className="ed-slide-input"
+            autoFocus
+            value={val}
+            onChange={(e) => setVal(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commit() }
+              else if (e.key === 'Escape') setEditing(false)
+            }}
+          />
+        ) : (
+          <span
+            className="ed-slide-title"
+            onDoubleClick={(e) => { e.stopPropagation(); startEdit() }}
+            title="더블클릭하여 이름 변경"
+          >
+            {slide?.title || ref}
+          </span>
+        )}
         <span className="ed-row-actions" onClick={(e) => e.stopPropagation()}>
           <button title="삭제" onClick={() => t.del(node)}>✕</button>
         </span>

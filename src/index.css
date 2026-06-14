@@ -422,6 +422,11 @@ button.danger { color: var(--body); }
 }
 .ed-thumb-sm img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ed-row .ed-slide-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-slide-input {
+  flex: 1; min-width: 0; background: var(--canvas); border: 1px solid var(--pill-border);
+  color: var(--ink); border-radius: 5px; padding: 3px 6px; font-size: 12.5px;
+}
+.ed-slide-input:focus { outline: none; border-color: var(--accent-sunset); }
 .ed-row .ed-row-actions { display: none; gap: 3px; flex: 0 0 auto; }
 .ed-row:hover .ed-row-actions { display: flex; }
 .ed-row .ed-row-actions button {
