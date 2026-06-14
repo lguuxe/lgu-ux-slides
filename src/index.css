@@ -101,24 +101,31 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 /* off-canvas slide: keep fixed width (no reflow), pull left by its own width */
 .layout.nav-collapsed .sidebar { margin-left: calc(-1 * var(--sidebar-w)); }
 
-/* always-visible nav panel (collapsed mode) */
+/* always-visible nav panel (collapsed mode) — floating card */
 .nav-panel {
-  flex: 0 0 220px; width: 220px;
-  display: flex; flex-direction: column;
-  background: var(--canvas-card);
-  border-right: 1px solid var(--hairline);
+  position: absolute; top: 16px; left: 16px; bottom: 16px; z-index: 30;
+  width: 190px; display: flex; flex-direction: column;
+  background: rgba(28, 28, 30, 0.35);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  opacity: 0.3;
+  transition: opacity .4s ease;
   animation: nav-panel-in .22s ease both;
 }
+.nav-panel:hover { opacity: 1; }
 @keyframes nav-panel-in {
   from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: none; }
+  to { opacity: 0.3; transform: none; }
 }
 .nav-panel-head {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end;
-  padding: 14px 12px 6px;
+  padding: 10px 10px 2px;
 }
 .nav-reopen {
-  width: 28px; height: 28px; padding: 0;
+  width: 24px; height: 24px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   background: transparent; color: var(--body-mid); cursor: pointer;
   border: none; transition: color .15s;
@@ -127,22 +134,27 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 
 .nav-overlay {
   flex: 1; min-height: 0; overflow-y: auto;
-  padding: 4px 10px 14px; scrollbar-width: none;
+  padding: 2px 8px 10px; scrollbar-width: none;
 }
 .nav-overlay::-webkit-scrollbar { width: 0; height: 0; }
+.nav-panel .nt-group-head { padding: 5px 8px; font-size: 11px; gap: 5px; }
+.nav-panel .nt-slide { padding: 4px 8px; font-size: 11px; gap: 6px; }
+.nav-panel .nt-num { font-size: 9px; }
+.nav-panel .nt-chevron { width: 10px; height: 10px; }
 .no-section { padding: 2px 0; }
 .no-section + .no-section { border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: 6px; padding-top: 8px; }
 .no-label {
   font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px;
-  font-size: 10px; color: var(--body-mid); padding: 4px 10px 5px;
+  font-size: 9px; color: var(--body-mid); padding: 3px 10px 4px;
 }
 .no-item {
-  display: block; padding: 7px 12px; border-radius: 10px; font-size: 13px; color: var(--body);
-  white-space: nowrap; cursor: pointer; transition: background .12s, color .12s; letter-spacing: -0.01em;
+  display: block; padding: 5px 10px; border-radius: 8px; font-size: 11px; color: var(--body);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer; transition: background .12s, color .12s; letter-spacing: -0.01em;
 }
 .no-item:hover { background: rgba(255, 255, 255, 0.12); color: var(--ink); }
 .no-item.active { background: rgba(255, 255, 255, 0.16); color: var(--ink); }
-.layout.nav-collapsed .toolbar { padding-left: 24px; }
+.layout.nav-collapsed .toolbar { padding-left: 58px; }
 
 .sidebar-head {
   padding: 24px 16px 16px 20px; border-bottom: 1px solid var(--hairline);
