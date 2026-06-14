@@ -141,8 +141,8 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   padding: 2px 8px 10px; scrollbar-width: none;
 }
 .nav-overlay::-webkit-scrollbar { width: 0; height: 0; }
-.nav-panel .nt-group-head { padding: 5px 8px; font-size: 11px; gap: 5px; font-weight: 600; color: var(--ink); }
-.nav-panel .nt-slide { padding: 3px 8px 3px 12px; font-size: 10px; gap: 6px; color: var(--body-mid); }
+.nav-panel .nt-group-head { padding: 5px 8px; font-size: 11px; gap: 5px; font-weight: 600; color: var(--body-mid); }
+.nav-panel .nt-slide { padding: 3px 8px 3px 12px; font-size: 10px; gap: 6px; color: var(--ink); }
 .nav-panel .nt-slide.active { color: var(--ink); }
 .nav-panel .nt-num { font-size: 9px; opacity: .5; }
 .nav-panel .nt-chevron { width: 10px; height: 10px; }
