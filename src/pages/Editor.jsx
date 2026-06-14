@@ -294,20 +294,6 @@ function EditorInner() {
     setData((d) => ({ ...d, demos: d.demos.filter((x) => x.id !== id) }))
   }
 
-  // ---------- global shortcuts (right rail) ----------
-  const addShortcut = () => {
-    setData((d) => ({ ...d, shortcuts: [...(d.shortcuts || []), { id: uid('sc'), label: '바로가기', target: { type: 'slide', ref: '' } }] }))
-  }
-  const updateShortcut = (id, patch) => {
-    setData((d) => ({ ...d, shortcuts: d.shortcuts.map((s) => (s.id === id ? { ...s, ...patch } : s)) }))
-  }
-  const updateShortcutTarget = (id, patch) => {
-    setData((d) => ({ ...d, shortcuts: d.shortcuts.map((s) => (s.id === id ? { ...s, target: { ...s.target, ...patch } } : s)) }))
-  }
-  const deleteShortcut = (id) => {
-    setData((d) => ({ ...d, shortcuts: d.shortcuts.filter((s) => s.id !== id) }))
-  }
-
   // ---------- import / export ----------
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -509,40 +495,6 @@ function EditorInner() {
             ))}
           </div>
 
-          {/* global shortcuts (right rail) */}
-          <div className="ed-section">
-            <div className="ed-section-head static">
-              <span>바로가기 (전역 · 우측)</span>
-              <button onClick={addShortcut}>+ 추가</button>
-            </div>
-            {(data.shortcuts || []).map((s) => (
-              <div key={s.id} className="ed-shortcut">
-                <input className="ed-sc-label" value={s.label} onChange={(e) => updateShortcut(s.id, { label: e.target.value })} placeholder="버튼 이름" />
-                <div className="ed-sc-row">
-                  <select value={s.target.type} onChange={(e) => updateShortcutTarget(s.id, { type: e.target.value, ref: '' })}>
-                    <option value="slide">슬라이드</option>
-                    <option value="demo">데모</option>
-                    <option value="url">URL</option>
-                  </select>
-                  {s.target.type === 'slide' && (
-                    <SlidePicker value={s.target.ref} data={data} onChange={(ref) => updateShortcutTarget(s.id, { ref })} />
-                  )}
-                  {s.target.type === 'demo' && (
-                    <select value={s.target.ref} onChange={(e) => updateShortcutTarget(s.id, { ref: e.target.value })}>
-                      <option value="">— 선택 —</option>
-                      {(data.demos || []).map((d) => (
-                        <option key={d.id} value={d.id}>{d.title}</option>
-                      ))}
-                    </select>
-                  )}
-                  {s.target.type === 'url' && (
-                    <input value={s.target.ref} onChange={(e) => updateShortcutTarget(s.id, { ref: e.target.value })} placeholder="https://..." />
-                  )}
-                  <button onClick={() => deleteShortcut(s.id)}>✕</button>
-                </div>
-              </div>
-            ))}
-          </div>
         </aside>
 
         <div className="ed-resizer" onMouseDown={startResize} title="드래그하여 패널 폭 조절" />
@@ -698,13 +650,6 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
   const slideOptions = Object.keys(data.slides)
   const kind = slideKind(slide)
 
-  // ---- this slide's own shortcuts (shown on the right rail, only on this screen) ----
-  const slideShortcuts = slide.shortcuts || []
-  const setSlideShortcuts = (next) => updateSlide({ shortcuts: next.length ? next : undefined })
-  const addSlideShortcut = () => setSlideShortcuts([...slideShortcuts, { id: uid('sc'), label: '바로가기', target: { type: 'slide', ref: '' } }])
-  const updateSlideShortcut = (id, patch) => setSlideShortcuts(slideShortcuts.map((s) => (s.id === id ? { ...s, ...patch } : s)))
-  const updateSlideShortcutTarget = (id, patch) => setSlideShortcuts(slideShortcuts.map((s) => (s.id === id ? { ...s, target: { ...s.target, ...patch } } : s)))
-  const deleteSlideShortcut = (id) => setSlideShortcuts(slideShortcuts.filter((s) => s.id !== id))
 
   return (
     <div className="slide-editor">
@@ -905,39 +850,6 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
       </div>
       )}
 
-      {/* this screen's own right-rail shortcuts (added on top of the global ones) */}
-      <div className="se-hotspot-list">
-        <div className="se-sc-head">
-          <h3>이 화면만의 바로가기 ({slideShortcuts.length})</h3>
-          <button className="se-apply" onClick={addSlideShortcut}>+ 추가</button>
-        </div>
-        <p className="muted" style={{ marginTop: 0 }}>전역 바로가기 아래에 이 슬라이드에서만 우측에 표시됩니다.</p>
-        {slideShortcuts.map((s) => (
-          <div key={s.id} className="hs-edit">
-            <input className="hs-label" value={s.label} onChange={(e) => updateSlideShortcut(s.id, { label: e.target.value })} placeholder="버튼 이름" />
-            <select value={s.target.type} onChange={(e) => updateSlideShortcutTarget(s.id, { type: e.target.value, ref: '' })}>
-              <option value="slide">슬라이드/부록</option>
-              <option value="demo">데모(iframe)</option>
-              <option value="url">외부 URL</option>
-            </select>
-            {s.target.type === 'slide' && (
-              <SlidePicker value={s.target.ref} data={data} onChange={(ref) => updateSlideShortcutTarget(s.id, { ref })} />
-            )}
-            {s.target.type === 'demo' && (
-              <select value={s.target.ref} onChange={(e) => updateSlideShortcutTarget(s.id, { ref: e.target.value })}>
-                <option value="">— 데모 선택 —</option>
-                {(data.demos || []).map((d) => (
-                  <option key={d.id} value={d.id}>{d.title}</option>
-                ))}
-              </select>
-            )}
-            {s.target.type === 'url' && (
-              <input value={s.target.ref} onChange={(e) => updateSlideShortcutTarget(s.id, { ref: e.target.value })} placeholder="https://..." />
-            )}
-            <button className="danger" onClick={() => deleteSlideShortcut(s.id)}>삭제</button>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

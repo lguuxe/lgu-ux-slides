@@ -3,16 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback, slideKind } from '../lib/images.js'
 import { ancestorGroups, groupNumbers } from '../lib/nav.js'
-import Hotspot, { useHotspotAction } from './Hotspot.jsx'
+import Hotspot from './Hotspot.jsx'
 import BackButton from './BackButton.jsx'
 
 export default function SlideView({ slideId }) {
   const { data, orderedSlideIds } = useData()
   const navigate = useNavigate()
-  const act = useHotspotAction()
   const slide = data.slides?.[slideId]
-  // right rail = global shortcuts (every slide) + this slide's own shortcuts
-  const shortcuts = [...(data.shortcuts || []), ...(slide?.shortcuts || [])]
 
   const idx = orderedSlideIds.indexOf(slideId)
   const inDeck = idx !== -1
@@ -35,16 +32,6 @@ export default function SlideView({ slideId }) {
   }
 
   const kind = slideKind(slide)
-
-  const rail = shortcuts.length > 0 ? (
-    <aside className="slide-rail">
-      {shortcuts.map((s) => (
-        <button key={s.id} className="rail-btn" onClick={() => act(s.target)} title={s.label}>
-          {s.label}
-        </button>
-      ))}
-    </aside>
-  ) : null
 
   return (
     <div className="slide-view">
@@ -116,11 +103,9 @@ export default function SlideView({ slideId }) {
                   <Hotspot key={hs.id} hotspot={hs} />
                 ))}
               </div>
-              {rail}
             </div>
           </div>
         )}
-        {(kind === 'iframe' || kind === 'html') && rail}
       </div>
     </div>
   )
