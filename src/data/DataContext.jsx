@@ -34,25 +34,17 @@ export function DataProvider({ children }) {
   const dataRef = useRef(null)
   dataRef.current = data
 
-  // Load order: local draft (editor's unsaved work) → server (Blobs) → static file
+  // Load the PUBLISHED copy only (server → static file). The local draft is never
+  // applied here, so the presentation always shows what everyone else sees — a
+  // leftover editor draft can't "stick" on a viewer's browser. The editor opts in
+  // to its draft explicitly via loadDraft().
   useEffect(() => {
     let cancelled = false
     async function load() {
-      let draft = null
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY)
-        if (stored) draft = JSON.parse(stored)
-      } catch (e) {
-        console.warn('Local draft unreadable', e)
-      }
-
       const server = await fetchServer()
-
       try {
         if (cancelled) return
-        if (draft) {
-          setDataState(draft); setSource('local')
-        } else if (server) {
+        if (server) {
           setDataState(server); setSource('server')
         } else {
           const file = await fetchFile()
@@ -110,12 +102,29 @@ export function DataProvider({ children }) {
 
   const importData = useCallback((json) => setData(json), [setData])
 
+  // editor-only: a draft (unsaved edits) saved in this browser
+  const hasDraft = useCallback(() => {
+    try { return !!localStorage.getItem(STORAGE_KEY) } catch { return false }
+  }, [])
+  const loadDraft = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      const parsed = stored && JSON.parse(stored)
+      if (parsed && parsed.slides) { setDataState(parsed); setSource('local'); return true }
+    } catch { /* ignore */ }
+    return false
+  }, [])
+  const discardDraft = useCallback(() => {
+    try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+  }, [])
+
   // Ordered slide ids for prev/next (recursive; appendix groups excluded)
   const orderedSlideIds = useMemo(() => (data ? deckSlideRefs(data.nav) : []), [data])
 
   const value = {
     data, setData, source, error,
     publish, resetToPublished, importData, orderedSlideIds,
+    hasDraft, loadDraft, discardDraft,
   }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

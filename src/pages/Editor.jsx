@@ -120,7 +120,17 @@ function EditGate({ onAuthed }) {
 }
 
 function EditorInner() {
-  const { data, setData, source, resetToPublished, importData, publish } = useData()
+  const { data, setData, source, resetToPublished, importData, publish, hasDraft, loadDraft, discardDraft } = useData()
+
+  // resume an unsaved local draft only inside the editor (never on viewer pages)
+  useEffect(() => {
+    if (hasDraft()) {
+      if (confirm('이 브라우저에 저장하지 않은 이전 편집 내용이 있습니다. 불러올까요?\n(취소하면 최신 게시본으로 시작하며 그 초안은 삭제됩니다.)')) loadDraft()
+      else discardDraft()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [selectedId, setSelectedId] = useState(() => {
     const first = deckSlideRefs(data.nav)[0]
     return first || Object.keys(data.slides || {})[0] || null
