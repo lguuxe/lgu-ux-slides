@@ -14,7 +14,7 @@ function Chevron({ open }) {
 }
 
 function GroupNode({ node, depth, numbers, slides, onNavigate, thumbnails }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(node.kind !== 'appendix') // appendix collapsed by default
   return (
     <div className={'nt-group' + (node.kind === 'appendix' ? ' appendix' : '')}>
       <button className="nt-group-head" style={{ paddingLeft: 10 + depth * 14 }} onClick={() => setOpen((o) => !o)}>

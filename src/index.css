@@ -68,7 +68,8 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 }
 
 /* ===================== Layout ===================== */
-.layout { display: flex; height: 100%; position: relative; overflow: hidden; }
+.layout { display: flex; height: 100%; position: relative; overflow: hidden; --slide-h: calc(100vh - 90px); }
+.layout.nav-collapsed { --slide-h: calc(100vh - 32px); }
 
 .sidebar {
   width: var(--sidebar-w); flex: 0 0 var(--sidebar-w);
@@ -283,13 +284,22 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   position: relative; line-height: 0; overflow: hidden;
   border: 1px solid var(--hairline); border-radius: var(--radius);
 }
-.slide-canvas img {
-  display: block; width: auto; height: auto;
-  max-width: 100%; max-height: calc(100vh - 90px); /* sidebar open: toolbar in flow */
-  transform: translateZ(0); /* composite onto its own layer to ease resize repaint */
+.slide-canvas img, .slide-video {
+  display: block; max-width: 100%; max-height: var(--slide-h);
 }
-/* sidebar collapsed: toolbar overlays → slide uses (near) full height */
-.layout.nav-collapsed .slide-canvas img { max-height: calc(100vh - 32px); }
+.slide-canvas img { width: auto; height: auto; transform: translateZ(0); }
+.slide-video { width: auto; height: auto; background: #000; border-radius: var(--radius); }
+
+/* fit: fill width, scroll vertically (tall images) */
+.slide-scroll.fit-width { align-items: flex-start; }
+.slide-scroll.fit-width .slide-canvas { width: 100%; }
+.slide-scroll.fit-width .slide-canvas img,
+.slide-scroll.fit-width .slide-video { width: 100%; height: auto; max-width: 100%; max-height: none; }
+
+/* fit: fill height, scroll horizontally (wide images) */
+.slide-scroll.fit-height { justify-content: flex-start; }
+.slide-scroll.fit-height .slide-canvas img,
+.slide-scroll.fit-height .slide-video { height: var(--slide-h); width: auto; max-width: none; max-height: none; }
 
 .hotspot {
   position: absolute; background: transparent; border: 1px solid transparent; cursor: pointer;
@@ -496,6 +506,10 @@ button.danger { color: var(--body); }
 .se-fields input {
   background: var(--canvas-soft); border: 1px solid var(--hairline); color: var(--ink);
   border-radius: var(--radius); padding: 9px 12px; font-size: 14px; min-width: 300px; letter-spacing: -0.01em;
+}
+.se-fields select {
+  background: var(--canvas-soft); border: 1px solid var(--hairline); color: var(--ink);
+  border-radius: var(--radius); padding: 9px 12px; font-size: 13px;
 }
 .se-id { font-family: var(--font-mono); font-size: 11px; color: var(--body-mid); }
 .se-hint { font-size: 13px; color: var(--body-mid); margin: 6px 0 16px; }

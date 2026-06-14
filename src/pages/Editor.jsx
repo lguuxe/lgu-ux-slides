@@ -539,6 +539,25 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
           <label>이미지 경로 <input value={slide.image || ''} onChange={(e) => updateSlide({ image: e.target.value })} placeholder="/slides/…" /></label>
         )}
       </div>
+      <div className="se-fields">
+        <label style={{ flex: 1 }}>
+          동영상 URL (선택)
+          <input
+            value={slide.video || ''}
+            onChange={(e) => updateSlide({ video: e.target.value || undefined })}
+            placeholder="https://…/video.mp4 — 있으면 이미지 대신 재생됩니다"
+            style={{ width: '100%' }}
+          />
+        </label>
+        <label>
+          이미지 맞춤
+          <select value={slide.fit || 'contain'} onChange={(e) => updateSlide({ fit: e.target.value })}>
+            <option value="contain">전체 보기 (기본)</option>
+            <option value="width">폭 채우기 · 세로 스크롤</option>
+            <option value="height">높이 채우기 · 가로 스크롤</option>
+          </select>
+        </label>
+      </div>
 
       <p className="se-hint">
         Figma 링크를 넣고 <b>«적용»</b>을 누르면 아래 미리보기가 그 프레임 캡쳐로 바뀝니다(아직 미게시).
@@ -643,7 +662,7 @@ function EdNode({ node, depth, t }) {
 }
 
 function EdGroup({ node, depth, t }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(node.kind !== 'appendix') // appendix collapsed by default
   const dropCls = t.dropInfo?.id === node.id ? ' drop-' + t.dropInfo.pos : ''
   return (
     <div className="ed-node">

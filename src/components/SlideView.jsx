@@ -58,9 +58,19 @@ export default function SlideView({ slideId }) {
         )}
       </div>
 
-      <div className="slide-scroll">
+      <div className={'slide-scroll fit-' + (slide.fit || 'contain')}>
         <div className="slide-canvas">
-          <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
+          {slide.video ? (
+            <video
+              src={slide.video}
+              poster={imageSrcFor(slide)}
+              controls
+              playsInline
+              className="slide-video"
+            />
+          ) : (
+            <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
+          )}
           {(slide.hotspots || []).map((hs) => (
             <Hotspot key={hs.id} hotspot={hs} />
           ))}
