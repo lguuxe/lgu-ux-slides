@@ -22,9 +22,13 @@ function GroupNode({ node, depth, numbers, slides, onNavigate, thumbnails }) {
         {numbers[node.id] && <span className="nt-num">{numbers[node.id]}</span>}
         <span className="nt-group-title">{node.title}</span>
       </button>
-      {open && (node.children || []).map((c) => (
-        <Node key={c.id} node={c} depth={depth + 1} numbers={numbers} slides={slides} onNavigate={onNavigate} thumbnails={thumbnails} />
-      ))}
+      <div className={'nt-children' + (open ? ' open' : '')}>
+        <div className="nt-children-inner">
+          {(node.children || []).map((c) => (
+            <Node key={c.id} node={c} depth={depth + 1} numbers={numbers} slides={slides} onNavigate={onNavigate} thumbnails={thumbnails} />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

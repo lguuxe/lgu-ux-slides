@@ -195,6 +195,10 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 .nt-chevron { flex: 0 0 auto; color: var(--body-mid); opacity: .6; transition: transform .15s, opacity .15s; }
 .nt-chevron.closed { transform: rotate(-90deg); }
 .nt-group-head:hover .nt-chevron { opacity: 1; }
+/* smooth expand/collapse of group children */
+.nt-children { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .24s cubic-bezier(0.4, 0, 0.2, 1); }
+.nt-children.open { grid-template-rows: 1fr; }
+.nt-children-inner { overflow: hidden; min-height: 0; }
 .nt-num { font-family: var(--font-mono); font-size: 11px; letter-spacing: .3px; color: var(--body-mid); flex: 0 0 auto; }
 .nt-group-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -465,6 +469,10 @@ button.danger { color: var(--body); }
 .ed-row.drop-before::before { top: -1px; }
 .ed-row.drop-after::after { bottom: -1px; }
 .ed-row.drop-inside { background: rgba(255, 122, 23, 0.16); outline: 1px solid var(--accent-sunset); }
+/* smooth expand/collapse in the editor tree */
+.ed-children { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s cubic-bezier(0.4, 0, 0.2, 1); }
+.ed-children.open { grid-template-rows: 1fr; }
+.ed-children-inner { overflow: hidden; min-height: 0; }
 
 .ed-section {
   margin-bottom: 16px; border: 1px solid var(--hairline); border-radius: var(--radius);

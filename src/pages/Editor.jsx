@@ -760,11 +760,11 @@ function EdGroup({ node, depth, t }) {
           <button title="삭제" onClick={() => t.del(node)}>✕</button>
         </span>
       </div>
-      {open && (
-        <div className="ed-children">
+      <div className={'ed-children' + (open ? ' open' : '')}>
+        <div className="ed-children-inner">
           {(node.children || []).map((c) => <EdNode key={c.id} node={c} depth={depth + 1} t={t} />)}
         </div>
-      )}
+      </div>
     </div>
   )
 }
