@@ -32,6 +32,17 @@ export default function SlideView({ slideId }) {
 
   const kind = slideKind(slide)
 
+  const globalHotspots = [
+    { id: '_g1', x: 92.7, y: 2.8, w: 5.9, h: 3.2, label: '링크', target: { type: 'slide', ref: 'slide-mqcbz60x-35e' } },
+    { id: '_g2', x: 92.8, y: 6.1, w: 5.8, h: 2.7, label: '링크', target: { type: 'slide', ref: 'slide-mqcc2365-fq' } },
+    { id: '_g3', x: 92.9, y: 9.1, w: 5.8, h: 2.9, label: '링크', target: { type: 'slide', ref: 'appendix-glossary' } },
+  ]
+  const existingRefs = new Set((slide.hotspots || []).map((h) => h.target?.ref))
+  const allHotspots = [
+    ...(slide.hotspots || []),
+    ...globalHotspots.filter((g) => !existingRefs.has(g.target.ref)),
+  ]
+
   return (
     <div className="slide-view">
       <div className="toolbar">
@@ -97,7 +108,7 @@ export default function SlideView({ slideId }) {
                 ) : (
                   <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
                 )}
-                {(slide.hotspots || []).map((hs) => (
+                {allHotspots.map((hs) => (
                   <Hotspot key={hs.id} hotspot={hs} />
                 ))}
               </div>
