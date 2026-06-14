@@ -7,7 +7,7 @@ export default function DemoView({ demoId }) {
   const demo = (data.demos || []).find((d) => d.id === demoId)
   const [reloadKey, setReloadKey] = useState(0)
   const wrapRef = useRef(null)
-  const [scale, setScale] = useState(1)
+  const [scale, setScale] = useState(null)
 
   const vp = demo?.viewport
 
@@ -39,6 +39,7 @@ export default function DemoView({ demoId }) {
       </div>
       <div ref={wrapRef} className={`iframe-wrap${vp ? ' iframe-wrap--viewport' : ''}`}>
         {vp ? (
+          scale != null && (
           <div
             className="iframe-scaler"
             style={{ width: vp.width * scale, height: vp.height * scale }}
@@ -47,10 +48,12 @@ export default function DemoView({ demoId }) {
               key={reloadKey}
               src={demo.url}
               title={demo.title}
+              scrolling="no"
               allow="clipboard-write; fullscreen; microphone; camera; geolocation"
               style={{ width: vp.width, height: vp.height, transform: `scale(${scale})` }}
             />
           </div>
+          )
         ) : (
           <iframe
             key={reloadKey}
