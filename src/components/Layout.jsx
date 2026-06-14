@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import Sidebar from './Sidebar.jsx'
-import NavOverlay from './NavOverlay.jsx'
+import NavOverlay, { NavDemos } from './NavOverlay.jsx'
+import BackButton from './BackButton.jsx'
 
 export default function Layout() {
   const location = useLocation()
@@ -59,6 +60,7 @@ export default function Layout() {
         <aside className="nav-panel">
           <div className="nav-panel-card">
             <div className="nav-panel-head">
+              <BackButton />
               <button className="nav-reopen" onClick={openSidebar} title="사이드바 열기" aria-label="사이드바 열기">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M19 5C19 4.44772 19.4477 4 20 4C20.5523 4 21 4.44772 21 5V19C21 19.5523 20.5523 20 20 20C19.4477 20 19 19.5523 19 19V5Z" fill="currentColor"/>
@@ -67,6 +69,7 @@ export default function Layout() {
               </button>
             </div>
             <NavOverlay onNavigate={() => {}} />
+            <NavDemos onNavigate={() => {}} />
           </div>
         </aside>
       )}
