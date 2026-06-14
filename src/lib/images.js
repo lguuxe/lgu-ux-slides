@@ -1,3 +1,10 @@
+// Current published revision — appended to Figma image URLs so a new save busts
+// the browser/CDN cache (otherwise stale captures linger behind the stable URL).
+let version = ''
+export function setImageVersion(v) {
+  version = v == null ? '' : String(v)
+}
+
 // Resolve the <img> src for a slide.
 // If the slide has a Figma frame link, render it live via the serverless function;
 // otherwise use the slide's static image path.
@@ -8,6 +15,7 @@ export function imageSrcFor(slide, opts = {}) {
     else if (opts.refresh) url += '&refresh=1'    // 적용/최신화: re-capture into draft
     else if (opts.draft) url += '&draft=1'   // editor preview: draft||published
     if (opts.bust) url += `&t=${opts.bust}`
+    else if (version) url += `&v=${version}`  // cache-bust on each published revision
     return url
   }
   return slide?.image || ''

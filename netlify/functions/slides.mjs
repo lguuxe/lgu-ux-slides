@@ -36,6 +36,8 @@ async function promoteFigmaDrafts(slides) {
     const k = `${parsed.fileKey}__${parsed.nodeId}`.replace(/:/g, '-')
     const draft = await imgStore.get(`draft__${k}`, { type: 'arrayBuffer' })
     if (draft) await imgStore.set(`pub__${k}`, draft)
+    // drop the cached thumbnail so it re-renders fresh from the latest frame
+    await imgStore.delete(`thumb__${k}`)
   }
 }
 

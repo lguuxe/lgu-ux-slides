@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { deckSlideRefs } from '../lib/nav.js'
+import { setImageVersion } from '../lib/images.js'
 
 const DataContext = createContext(null)
 const STORAGE_KEY = 'ux-report-data-v2'   // local unsaved draft (editor only)
@@ -47,11 +48,13 @@ export function DataProvider({ children }) {
         if (cancelled) return
         if (server) {
           revRef.current = server._rev || 0
+          setImageVersion(server._rev || 0)
           setDataState(server); setSource('server')
         } else {
           const file = await fetchFile()
           if (cancelled) return
           revRef.current = null
+          setImageVersion(file._rev || '')
           setDataState(file); setSource('file')
         }
       } catch (e) {
@@ -100,6 +103,7 @@ export function DataProvider({ children }) {
     }
     const j = await res.json()
     revRef.current = j.rev // adopt the new revision so subsequent saves are based on it
+    setImageVersion(j.rev) // bust image caches to the freshly published captures
     localStorage.removeItem(STORAGE_KEY)
     setSource('server')
     return j
@@ -109,9 +113,10 @@ export function DataProvider({ children }) {
   const resetToPublished = useCallback(async () => {
     localStorage.removeItem(STORAGE_KEY)
     const server = await fetchServer()
-    if (server) { revRef.current = server._rev || 0; setDataState(server); setSource('server'); return }
+    if (server) { revRef.current = server._rev || 0; setImageVersion(server._rev || 0); setDataState(server); setSource('server'); return }
     const file = await fetchFile()
     revRef.current = null
+    setImageVersion(file._rev || '')
     setDataState(file); setSource('file')
   }, [])
 
