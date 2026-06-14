@@ -62,32 +62,34 @@ export default function SlideView({ slideId }) {
 
       <div className="slide-body">
         <div className={'slide-scroll fit-' + (slide.fit || 'contain')}>
-          <div className="slide-canvas">
-            {slide.video ? (
-              <video
-                src={slide.video}
-                poster={imageSrcFor(slide)}
-                controls
-                playsInline
-                className="slide-video"
-              />
-            ) : (
-              <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
+          <div className="slide-stage">
+            <div className="slide-canvas">
+              {slide.video ? (
+                <video
+                  src={slide.video}
+                  poster={imageSrcFor(slide)}
+                  controls
+                  playsInline
+                  className="slide-video"
+                />
+              ) : (
+                <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
+              )}
+              {(slide.hotspots || []).map((hs) => (
+                <Hotspot key={hs.id} hotspot={hs} />
+              ))}
+            </div>
+            {shortcuts.length > 0 && (
+              <aside className="slide-rail">
+                {shortcuts.map((s) => (
+                  <button key={s.id} className="rail-btn" onClick={() => act(s.target)} title={s.label}>
+                    {s.label}
+                  </button>
+                ))}
+              </aside>
             )}
-            {(slide.hotspots || []).map((hs) => (
-              <Hotspot key={hs.id} hotspot={hs} />
-            ))}
           </div>
         </div>
-        {shortcuts.length > 0 && (
-          <aside className="slide-rail">
-            {shortcuts.map((s) => (
-              <button key={s.id} className="rail-btn" onClick={() => act(s.target)} title={s.label}>
-                {s.label}
-              </button>
-            ))}
-          </aside>
-        )}
       </div>
     </div>
   )

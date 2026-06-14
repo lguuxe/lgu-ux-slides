@@ -278,11 +278,9 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 /* ===================== Slide view ===================== */
 .slide-view, .demo-view { display: flex; flex-direction: column; height: 100%; position: relative; }
 .slide-body { flex: 1; display: flex; min-height: 0; }
-.slide-rail {
-  flex: 0 0 104px; display: flex; flex-direction: column; gap: 6px;
-  padding: 12px 8px; overflow-y: auto; background: var(--canvas);
-  border-left: 1px solid var(--hairline); align-content: flex-start;
-}
+/* image + shortcut rail centered together, so the rail hugs the image's right edge */
+.slide-stage { display: flex; align-items: flex-start; gap: 12px; max-width: 100%; }
+.slide-rail { flex: 0 0 104px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .rail-btn {
   display: block; width: 100%; text-align: left; cursor: pointer;
   background: var(--canvas-card); color: var(--ink); border: 1px solid var(--hairline);
@@ -296,7 +294,7 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   padding: 16px; background: var(--canvas); min-height: 0;
 }
 .slide-canvas {
-  position: relative; line-height: 0; overflow: hidden;
+  position: relative; line-height: 0; overflow: hidden; flex: 0 1 auto; min-width: 0;
   border: 1px solid var(--hairline); border-radius: var(--radius);
 }
 .slide-canvas img, .slide-video {
@@ -307,7 +305,8 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 
 /* fit: fill width, scroll vertically (tall images) */
 .slide-scroll.fit-width { align-items: flex-start; }
-.slide-scroll.fit-width .slide-canvas { width: 100%; }
+.slide-scroll.fit-width .slide-stage { width: 100%; }
+.slide-scroll.fit-width .slide-canvas { flex: 1; width: auto; }
 .slide-scroll.fit-width .slide-canvas img,
 .slide-scroll.fit-width .slide-video { width: 100%; height: auto; max-width: 100%; max-height: none; }
 
