@@ -1,9 +1,22 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function BackButton() {
   const navigate = useNavigate()
-  // history.idx > 0 means there is somewhere to go back to within the app
   const canGoBack = window.history.state && window.history.state.idx > 0
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+      if (e.key === 'Backspace') {
+        const idx = window.history.state?.idx
+        if (idx && idx > 0) { e.preventDefault(); navigate(-1) }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navigate])
+
   if (!canGoBack) return <div className="back-btn-placeholder" />
   return (
     <button className="back-btn" onClick={() => navigate(-1)}>
