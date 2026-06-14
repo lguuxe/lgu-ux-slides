@@ -33,6 +33,7 @@ export function DataProvider({ children }) {
   const [error, setError] = useState(null)
   const dataRef = useRef(null)
   dataRef.current = data
+  const revRef = useRef(null) // server revision the current data is based on
 
   // Load the PUBLISHED copy only (server → static file). The local draft is never
   // applied here, so the presentation always shows what everyone else sees — a
@@ -45,10 +46,12 @@ export function DataProvider({ children }) {
       try {
         if (cancelled) return
         if (server) {
+          revRef.current = server._rev || 0
           setDataState(server); setSource('server')
         } else {
           const file = await fetchFile()
           if (cancelled) return
+          revRef.current = null
           setDataState(file); setSource('file')
         }
       } catch (e) {
@@ -74,29 +77,41 @@ export function DataProvider({ children }) {
   }, [])
 
   // Publish the current draft to the server (Blobs) for everyone. Needs the edit password.
-  const publish = useCallback(async (password) => {
-    const res = await fetch(SLIDES_FN, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-edit-password': password },
-      body: JSON.stringify(dataRef.current),
-    })
+  // Optimistic concurrency: sends the loaded revision; 409 if someone saved first
+  // (unless opts.force overwrites).
+  const publish = useCallback(async (password, opts = {}) => {
+    const headers = {
+      'content-type': 'application/json',
+      'x-edit-password': password,
+      'x-base-rev': String(revRef.current ?? ''),
+    }
+    if (opts.force) headers['x-force'] = '1'
+    const res = await fetch(SLIDES_FN, { method: 'POST', headers, body: JSON.stringify(dataRef.current) })
+    if (res.status === 409) {
+      const err = new Error('conflict')
+      err.conflict = true
+      try { err.currentRev = (await res.json()).currentRev } catch {}
+      throw err
+    }
     if (!res.ok) {
       let msg = 'HTTP ' + res.status
       try { msg = (await res.json()).error || msg } catch {}
       throw new Error(msg)
     }
-    // draft is now identical to server → drop it and rely on server going forward
+    const j = await res.json()
+    revRef.current = j.rev // adopt the new revision so subsequent saves are based on it
     localStorage.removeItem(STORAGE_KEY)
     setSource('server')
-    return res.json()
+    return j
   }, [])
 
   // Discard local draft, reload the published (server, else file) copy
   const resetToPublished = useCallback(async () => {
     localStorage.removeItem(STORAGE_KEY)
     const server = await fetchServer()
-    if (server) { setDataState(server); setSource('server'); return }
+    if (server) { revRef.current = server._rev || 0; setDataState(server); setSource('server'); return }
     const file = await fetchFile()
+    revRef.current = null
     setDataState(file); setSource('file')
   }, [])
 

@@ -71,9 +71,20 @@ export default async (req) => {
       return json({ error: 'slides 필드가 없는 데이터' }, 400)
     }
 
+    // optimistic concurrency: reject if someone else saved since the client loaded
+    const current = await store.get(KEY, { type: 'json' })
+    const currentRev = current?._rev || 0
+    const force = req.headers.get('x-force') === '1'
+    const baseRev = req.headers.get('x-base-rev') || ''
+    if (!force && current && String(currentRev) !== String(baseRev)) {
+      return json({ error: 'conflict', currentRev }, 409)
+    }
+
+    const newRev = currentRev + 1
+    body._rev = newRev
     await store.setJSON(KEY, body)
     await promoteFigmaDrafts(body.slides)
-    return json({ ok: true, savedAt: new Date().toISOString() })
+    return json({ ok: true, rev: newRev, savedAt: new Date().toISOString() })
   }
 
   return json({ error: 'Method not allowed' }, 405)

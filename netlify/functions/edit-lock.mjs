@@ -27,17 +27,12 @@ export default async (req) => {
   const store = getStore('ux-report')
   const now = Date.now()
 
+  // Password check only — concurrent editing is allowed (no exclusive lock).
+  // Conflicts are handled at save time via the slides function's revision check.
   if (action === 'acquire') {
     const expected = process.env.EDIT_PASSWORD || ''
     if (!expected) return json({ ok: false, reason: 'no-password-config' }, 403)
     if (password !== expected) return json({ ok: false, reason: 'bad-password' }, 401)
-    if (!token) return json({ ok: false, reason: 'no-token' }, 400)
-
-    const lock = await store.get(KEY, { type: 'json' })
-    if (lock && lock.token !== token && now - lock.ts < LOCK_TTL) {
-      return json({ ok: false, reason: 'locked', since: lock.ts })
-    }
-    await store.setJSON(KEY, { token, ts: now })
     return json({ ok: true })
   }
 
