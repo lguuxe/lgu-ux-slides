@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback } from '../lib/images.js'
 import { ancestorGroups, groupNumbers } from '../lib/nav.js'
-import Hotspot from './Hotspot.jsx'
+import Hotspot, { useHotspotAction } from './Hotspot.jsx'
 import BackButton from './BackButton.jsx'
 
 export default function SlideView({ slideId }) {
   const { data, orderedSlideIds } = useData()
   const navigate = useNavigate()
+  const act = useHotspotAction()
   const slide = data.slides?.[slideId]
+  const shortcuts = data.shortcuts || []
 
   const idx = orderedSlideIds.indexOf(slideId)
   const inDeck = idx !== -1
@@ -58,23 +60,34 @@ export default function SlideView({ slideId }) {
         )}
       </div>
 
-      <div className={'slide-scroll fit-' + (slide.fit || 'contain')}>
-        <div className="slide-canvas">
-          {slide.video ? (
-            <video
-              src={slide.video}
-              poster={imageSrcFor(slide)}
-              controls
-              playsInline
-              className="slide-video"
-            />
-          ) : (
-            <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
-          )}
-          {(slide.hotspots || []).map((hs) => (
-            <Hotspot key={hs.id} hotspot={hs} />
-          ))}
+      <div className="slide-body">
+        <div className={'slide-scroll fit-' + (slide.fit || 'contain')}>
+          <div className="slide-canvas">
+            {slide.video ? (
+              <video
+                src={slide.video}
+                poster={imageSrcFor(slide)}
+                controls
+                playsInline
+                className="slide-video"
+              />
+            ) : (
+              <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
+            )}
+            {(slide.hotspots || []).map((hs) => (
+              <Hotspot key={hs.id} hotspot={hs} />
+            ))}
+          </div>
         </div>
+        {shortcuts.length > 0 && (
+          <aside className="slide-rail">
+            {shortcuts.map((s) => (
+              <button key={s.id} className="rail-btn" onClick={() => act(s.target)} title={s.label}>
+                {s.label}
+              </button>
+            ))}
+          </aside>
+        )}
       </div>
     </div>
   )

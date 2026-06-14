@@ -125,5 +125,9 @@
       "title": "Web 서비스",
       "url": "https://server-production-734f.up.railway.app/web?code=688A65B8"
     }
+  ],
+  "shortcuts": [
+    { "id": "sc-demo1", "label": "▶ UX Governance Tool", "target": { "type": "demo", "ref": "demo-main" } },
+    { "id": "sc-appendix", "label": "부록 · 용어 정리", "target": { "type": "slide", "ref": "appendix-glossary" } }
   ]
 }

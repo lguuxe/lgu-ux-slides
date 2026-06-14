@@ -242,6 +242,20 @@ function EditorInner() {
     setData((d) => ({ ...d, demos: d.demos.filter((x) => x.id !== id) }))
   }
 
+  // ---------- global shortcuts (right rail) ----------
+  const addShortcut = () => {
+    setData((d) => ({ ...d, shortcuts: [...(d.shortcuts || []), { id: uid('sc'), label: '바로가기', target: { type: 'slide', ref: '' } }] }))
+  }
+  const updateShortcut = (id, patch) => {
+    setData((d) => ({ ...d, shortcuts: d.shortcuts.map((s) => (s.id === id ? { ...s, ...patch } : s)) }))
+  }
+  const updateShortcutTarget = (id, patch) => {
+    setData((d) => ({ ...d, shortcuts: d.shortcuts.map((s) => (s.id === id ? { ...s, target: { ...s.target, ...patch } } : s)) }))
+  }
+  const deleteShortcut = (id) => {
+    setData((d) => ({ ...d, shortcuts: d.shortcuts.filter((s) => s.id !== id) }))
+  }
+
   // ---------- import / export ----------
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -404,6 +418,46 @@ function EditorInner() {
                 <input value={demo.title} onChange={(e) => updateDemo(demo.id, { title: e.target.value })} placeholder="이름" />
                 <input value={demo.url} onChange={(e) => updateDemo(demo.id, { url: e.target.value })} placeholder="https://..." />
                 <button onClick={() => deleteDemo(demo.id)}>✕</button>
+              </div>
+            ))}
+          </div>
+
+          {/* global shortcuts (right rail) */}
+          <div className="ed-section">
+            <div className="ed-section-head static">
+              <span>바로가기 (전역 · 우측)</span>
+              <button onClick={addShortcut}>+ 추가</button>
+            </div>
+            {(data.shortcuts || []).map((s) => (
+              <div key={s.id} className="ed-shortcut">
+                <input className="ed-sc-label" value={s.label} onChange={(e) => updateShortcut(s.id, { label: e.target.value })} placeholder="버튼 이름" />
+                <div className="ed-sc-row">
+                  <select value={s.target.type} onChange={(e) => updateShortcutTarget(s.id, { type: e.target.value, ref: '' })}>
+                    <option value="slide">슬라이드</option>
+                    <option value="demo">데모</option>
+                    <option value="url">URL</option>
+                  </select>
+                  {s.target.type === 'slide' && (
+                    <select value={s.target.ref} onChange={(e) => updateShortcutTarget(s.id, { ref: e.target.value })}>
+                      <option value="">— 선택 —</option>
+                      {Object.keys(data.slides).map((id) => (
+                        <option key={id} value={id}>{data.slides[id]?.title || id}</option>
+                      ))}
+                    </select>
+                  )}
+                  {s.target.type === 'demo' && (
+                    <select value={s.target.ref} onChange={(e) => updateShortcutTarget(s.id, { ref: e.target.value })}>
+                      <option value="">— 선택 —</option>
+                      {(data.demos || []).map((d) => (
+                        <option key={d.id} value={d.id}>{d.title}</option>
+                      ))}
+                    </select>
+                  )}
+                  {s.target.type === 'url' && (
+                    <input value={s.target.ref} onChange={(e) => updateShortcutTarget(s.id, { ref: e.target.value })} placeholder="https://..." />
+                  )}
+                  <button onClick={() => deleteShortcut(s.id)}>✕</button>
+                </div>
               </div>
             ))}
           </div>
