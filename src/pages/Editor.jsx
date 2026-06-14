@@ -342,31 +342,22 @@ function EditorInner() {
 
     setRefreshing(true)
     setRefreshProg({ done: 0, total: entries.length })
-    const byFile = {}
-    for (const e of entries) (byFile[e.fileKey] ||= []).push(e.nodeId)
-
-    const post = (payload) => fetch('/.netlify/functions/figma-refresh', {
-      method: 'POST', headers: { 'content-type': 'application/json', 'x-edit-password': pw },
-      body: JSON.stringify(payload),
-    })
-
+    const startFr = data.figmaRev || 0
     try {
-      const begin = await post({ action: 'begin' }).then((r) => r.json())
-      const fr = begin.fr
-      let done = 0
-      const CHUNK = 10
-      for (const [fileKey, ids] of Object.entries(byFile)) {
-        for (let i = 0; i < ids.length; i += CHUNK) {
-          const chunk = ids.slice(i, i + CHUNK)
-          await post({ action: 'render', fr, fileKey, nodeIds: chunk, scale: 2 })   // full
-          await post({ action: 'render', fr, fileKey, nodeIds: chunk, scale: 0.5 }) // thumbnail
-          done += chunk.length
-          setRefreshProg({ done, total: entries.length })
+      // kick off the background build (returns 202 immediately)
+      await fetch('/.netlify/functions/figma-refresh-background', { method: 'POST', headers: { 'x-edit-password': pw } })
+      // poll status until done (up to ~12 min)
+      for (let i = 0; i < 240; i++) {
+        await new Promise((r) => setTimeout(r, 3000))
+        const st = await fetch('/.netlify/functions/figma-refresh').then((r) => r.json()).catch(() => null)
+        if (st && st.total) setRefreshProg({ done: st.done || 0, total: st.total })
+        if (st && st.state === 'done' && st.fr > startFr) {
+          setImageVersion(`${data._rev || 0}-${st.fr}`)
+          alert('최신화 완료! 발표 화면을 새로고침하면 반영됩니다.')
+          return
         }
       }
-      await post({ action: 'commit', fr })
-      setImageVersion(`${data._rev || 0}-${fr}`)
-      alert('최신화 완료! 발표 화면을 새로고침하면 반영됩니다.')
+      alert('최신화가 백그라운드에서 계속 진행 중입니다. 잠시 후 다시 시도하면 이어서 진행됩니다.')
     } catch (e) {
       alert('최신화 실패: ' + e.message)
     } finally {
