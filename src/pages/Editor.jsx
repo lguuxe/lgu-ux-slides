@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback, setImageVersion } from '../lib/images.js'
+import SlidePicker from '../components/SlidePicker.jsx'
 import {
   isGroup, slideRef, groupNumbers, deckSlideRefs, allNavSlideRefs,
   findNode, containsId, removeNode, insertNode, updateNode,
@@ -485,12 +486,7 @@ function EditorInner() {
                     <option value="url">URL</option>
                   </select>
                   {s.target.type === 'slide' && (
-                    <select value={s.target.ref} onChange={(e) => updateShortcutTarget(s.id, { ref: e.target.value })}>
-                      <option value="">— 선택 —</option>
-                      {Object.keys(data.slides).map((id) => (
-                        <option key={id} value={id}>{data.slides[id]?.title || id}</option>
-                      ))}
-                    </select>
+                    <SlidePicker value={s.target.ref} data={data} onChange={(ref) => updateShortcutTarget(s.id, { ref })} />
                   )}
                   {s.target.type === 'demo' && (
                     <select value={s.target.ref} onChange={(e) => updateShortcutTarget(s.id, { ref: e.target.value })}>
@@ -752,12 +748,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
               <option value="url">외부 URL</option>
             </select>
             {hs.target.type === 'slide' && (
-              <select value={hs.target.ref} onChange={(e) => updateHsTarget(hs.id, { ref: e.target.value })}>
-                <option value="">— 대상 선택 —</option>
-                {slideOptions.map((id) => (
-                  <option key={id} value={id}>{data.slides[id]?.title || id}</option>
-                ))}
-              </select>
+              <SlidePicker value={hs.target.ref} data={data} onChange={(ref) => updateHsTarget(hs.id, { ref })} />
             )}
             {hs.target.type === 'demo' && (
               <select value={hs.target.ref} onChange={(e) => updateHsTarget(hs.id, { ref: e.target.value })}>

@@ -124,6 +124,29 @@ export function updateNode(nav, id, patch) {
   })
 }
 
+// Flat, ordered list of slides for a picker: { ref, title, pathLabel, depth, orphan }.
+export function flattenForPicker(data) {
+  const out = []
+  const numbers = groupNumbers(data.nav)
+  const walk = (nodes, parts, depth) => {
+    for (const n of nodes || []) {
+      if (isGroup(n)) {
+        const label = (numbers[n.id] ? numbers[n.id] + ' ' : '') + n.title
+        walk(n.children, [...parts, label], depth + 1)
+      } else {
+        const ref = slideRef(n)
+        out.push({ ref, title: data.slides?.[ref]?.title || ref, pathLabel: parts.join(' › '), depth })
+      }
+    }
+  }
+  walk(data.nav, [], 0)
+  const inNav = allNavSlideRefs(data.nav)
+  for (const id of Object.keys(data.slides || {})) {
+    if (!inNav.has(id)) out.push({ ref: id, title: data.slides[id]?.title || id, pathLabel: '링크 전용', depth: 0, orphan: true })
+  }
+  return out
+}
+
 // All slide refs referenced anywhere in the nav (to compute orphan slides).
 export function allNavSlideRefs(nav) {
   const set = new Set()
