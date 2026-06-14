@@ -558,6 +558,37 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
   const [linkInput, setLinkInput] = useState(slide.figmaUrl || '')
   const [loading, setLoading] = useState(() => !!slide.figmaUrl)
   const [imgSrc, setImgSrc] = useState(() => imageSrcFor(slide, { draft: true }))
+  const [uploadProg, setUploadProg] = useState(null) // { done, total } for video upload
+
+  // upload a local video file in chunks → Blobs, set slide.video to the serve URL
+  const onVideoFile = async (file) => {
+    const pw = sessionStorage.getItem('edit-pw')
+    if (!pw) { alert('편집 세션이 없습니다.'); return }
+    const id = uid('vid')
+    const CHUNK = 4 * 1024 * 1024
+    const parts = Math.max(1, Math.ceil(file.size / CHUNK))
+    setUploadProg({ done: 0, total: parts })
+    try {
+      for (let i = 0; i < parts; i++) {
+        const res = await fetch(`/.netlify/functions/video-upload?id=${id}&part=${i}`, {
+          method: 'POST', headers: { 'x-edit-password': pw }, body: file.slice(i * CHUNK, (i + 1) * CHUNK),
+        })
+        if (!res.ok) throw new Error('파트 업로드 실패 (' + (i + 1) + ')')
+        setUploadProg({ done: i + 1, total: parts })
+      }
+      const fin = await fetch(
+        `/.netlify/functions/video-upload?id=${id}&action=finalize&parts=${parts}&type=${encodeURIComponent(file.type || 'video/mp4')}`,
+        { method: 'POST', headers: { 'x-edit-password': pw } }
+      )
+      if (!fin.ok) throw new Error('마무리 실패')
+      updateSlide({ video: `/.netlify/functions/video?id=${id}` })
+      alert('동영상 업로드 완료! 좌측 상단 「저장」을 눌러야 발표에 반영됩니다.')
+    } catch (e) {
+      alert('동영상 업로드 실패: ' + e.message)
+    } finally {
+      setUploadProg(null)
+    }
+  }
 
   // 「적용」: capture the typed link from Figma into the draft (preview only, not yet saved)
   const applyLink = () => {
@@ -644,13 +675,22 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
       </div>
       <div className="se-fields">
         <label style={{ flex: 1 }}>
-          동영상 URL (선택)
-          <input
-            value={slide.video || ''}
-            onChange={(e) => updateSlide({ video: e.target.value || undefined })}
-            placeholder="https://…/video.mp4 — 있으면 이미지 대신 재생됩니다"
-            style={{ width: '100%' }}
-          />
+          동영상 (업로드 또는 URL · 있으면 이미지 대신 재생)
+          <div className="se-link-row">
+            <input
+              value={slide.video || ''}
+              onChange={(e) => updateSlide({ video: e.target.value || undefined })}
+              placeholder="로컬 업로드 또는 https://…/video.mp4"
+            />
+            <label className={'se-apply' + (uploadProg ? ' busy' : '')} style={{ cursor: 'pointer' }}>
+              {uploadProg ? `${uploadProg.done}/${uploadProg.total}` : '업로드'}
+              <input type="file" accept="video/*" hidden disabled={!!uploadProg}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onVideoFile(f); e.target.value = '' }} />
+            </label>
+            {slide.video && (
+              <button type="button" className="se-apply" title="동영상 제거" onClick={() => updateSlide({ video: undefined })}>✕</button>
+            )}
+          </div>
         </label>
         <label>
           이미지 맞춤

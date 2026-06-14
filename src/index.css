@@ -549,8 +549,10 @@ button.danger { color: var(--body); }
 .se-apply {
   flex: 0 0 auto; background: transparent; color: var(--ink);
   border: 1px solid var(--pill-border); border-radius: var(--pill);
-  padding: 0 20px; font-size: 13px; cursor: pointer; transition: border-color .15s, background .15s;
+  padding: 0 18px; font-size: 13px; cursor: pointer; transition: border-color .15s, background .15s;
+  display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
 }
+.se-apply.busy { color: var(--body-mid); }
 .se-apply:hover { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.05); }
 
 .se-canvas-scroll {
