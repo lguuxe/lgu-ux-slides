@@ -11,10 +11,37 @@ const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.
 
 const LOCK_FN = '/.netlify/functions/edit-lock'
 
-// ===================== Auth gate (password only; concurrent editing allowed) =====================
+// ===================== Auth gate + single-editor lock =====================
 export default function Editor() {
-  const [authed, setAuthed] = useState(false)
-  if (!authed) return <EditGate onAuthed={() => setAuthed(true)} />
+  const [token, setToken] = useState(null)
+
+  // keep the lock alive while editing; release it on leave
+  useEffect(() => {
+    if (!token) return
+    const beat = () => {
+      fetch(LOCK_FN, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'heartbeat', token }),
+      }).then((r) => r.json()).then((j) => {
+        if (j && j.ok === false && j.reason === 'lost') {
+          alert('편집 세션이 만료되어 잠금이 해제됐습니다. 다시 진입해 주세요.')
+          sessionStorage.removeItem('edit-token')
+          setToken(null)
+        }
+      }).catch(() => {})
+    }
+    const hb = setInterval(beat, 45000)
+    const release = () => {
+      try {
+        const blob = new Blob([JSON.stringify({ action: 'release', token })], { type: 'application/json' })
+        navigator.sendBeacon?.(LOCK_FN, blob)
+      } catch { /* ignore */ }
+    }
+    window.addEventListener('pagehide', release)
+    return () => { clearInterval(hb); window.removeEventListener('pagehide', release); release() }
+  }, [token])
+
+  if (!token) return <EditGate onAuthed={setToken} />
   return <EditorInner />
 }
 
