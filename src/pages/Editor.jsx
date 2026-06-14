@@ -619,6 +619,36 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
 
   const updateHs = (id, patch) =>
     updateHotspots(slide.hotspots.map((h) => (h.id === id ? { ...h, ...patch } : h)))
+
+  // drag an existing hotspot: move (mode 'move') or resize via a handle ('n','se',…)
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n))
+  const startHsDrag = (e, hs, mode, handle) => {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    e.preventDefault()
+    setSelectedHs(hs.id)
+    const start = pctFromEvent(e)
+    const r0 = { x: hs.x, y: hs.y, w: hs.w, h: hs.h }
+    const move = (ev) => {
+      const cur = pctFromEvent(ev)
+      const dx = cur.x - start.x
+      const dy = cur.y - start.y
+      const r = { ...r0 }
+      if (mode === 'move') {
+        r.x = clamp(r0.x + dx, 0, 100 - r0.w)
+        r.y = clamp(r0.y + dy, 0, 100 - r0.h)
+      } else {
+        if (handle.includes('e')) r.w = clamp(r0.w + dx, 1, 100 - r0.x)
+        if (handle.includes('s')) r.h = clamp(r0.h + dy, 1, 100 - r0.y)
+        if (handle.includes('w')) { const nx = clamp(r0.x + dx, 0, r0.x + r0.w - 1); r.x = nx; r.w = r0.w + (r0.x - nx) }
+        if (handle.includes('n')) { const ny = clamp(r0.y + dy, 0, r0.y + r0.h - 1); r.y = ny; r.h = r0.h + (r0.y - ny) }
+      }
+      updateHs(hs.id, { x: round(r.x), y: round(r.y), w: round(r.w), h: round(r.h) })
+    }
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
   const updateHsTarget = (id, patch) =>
     updateHotspots(slide.hotspots.map((h) => (h.id === id ? { ...h, target: { ...h.target, ...patch } } : h)))
   const deleteHs = (id) => {
@@ -713,9 +743,16 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
               key={hs.id}
               className={'se-hotspot' + (selectedHs === hs.id ? ' active' : '')}
               style={{ left: `${hs.x}%`, top: `${hs.y}%`, width: `${hs.w}%`, height: `${hs.h}%` }}
-              onMouseDown={(e) => { e.stopPropagation(); setSelectedHs(hs.id) }}
+              onMouseDown={(e) => startHsDrag(e, hs, 'move')}
             >
               <span>{hs.label}</span>
+              {selectedHs === hs.id && ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map((h) => (
+                <span
+                  key={h}
+                  className={'se-hs-handle h-' + h}
+                  onMouseDown={(e) => startHsDrag(e, hs, 'resize', h)}
+                />
+              ))}
             </div>
           ))}
           {draft && (
