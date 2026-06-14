@@ -555,7 +555,8 @@ button.danger { color: var(--body); }
 }
 .ed-add-slide { width: 100%; margin-top: 8px; }
 
-.ed-demo { display: flex; gap: 5px; margin-bottom: 7px; }
+.ed-demo-card { margin-bottom: 10px; }
+.ed-demo { display: flex; gap: 5px; }
 .ed-demo input {
   flex: 1; min-width: 0; background: var(--canvas); border: 1px solid var(--hairline); color: var(--ink);
   border-radius: 6px; padding: 6px 8px; font-size: 11px;
@@ -564,6 +565,15 @@ button.danger { color: var(--body); }
   background: transparent; border: 1px solid var(--hairline); color: var(--body);
   border-radius: var(--pill); cursor: pointer; padding: 0 10px;
 }
+.ed-demo-vp {
+  display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; color: var(--body);
+}
+.ed-demo-vp label { display: flex; align-items: center; gap: 3px; white-space: nowrap; cursor: pointer; }
+.ed-demo-vp input[type="number"] {
+  width: 68px; background: var(--canvas); border: 1px solid var(--hairline); color: var(--ink);
+  border-radius: 6px; padding: 4px 6px; font-size: 11px; text-align: center;
+}
+.ed-demo-vp span { color: var(--muted); }
 
 .ed-shortcut { margin-bottom: 10px; }
 .ed-sc-label { width: 100%; background: var(--canvas); border: 1px solid var(--hairline); color: var(--ink); border-radius: 6px; padding: 6px 8px; font-size: 12px; margin-bottom: 4px; }

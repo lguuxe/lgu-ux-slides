@@ -472,10 +472,39 @@ function EditorInner() {
               <button onClick={addDemo}>+ 데모</button>
             </div>
             {(data.demos || []).map((demo) => (
-              <div key={demo.id} className="ed-demo">
-                <input value={demo.title} onChange={(e) => updateDemo(demo.id, { title: e.target.value })} placeholder="이름" />
-                <input value={demo.url} onChange={(e) => updateDemo(demo.id, { url: e.target.value })} placeholder="https://..." />
-                <button onClick={() => deleteDemo(demo.id)}>✕</button>
+              <div key={demo.id} className="ed-demo-card">
+                <div className="ed-demo">
+                  <input value={demo.title} onChange={(e) => updateDemo(demo.id, { title: e.target.value })} placeholder="이름" />
+                  <input value={demo.url} onChange={(e) => updateDemo(demo.id, { url: e.target.value })} placeholder="https://..." />
+                  <button onClick={() => deleteDemo(demo.id)}>✕</button>
+                </div>
+                <div className="ed-demo-vp">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={!!demo.viewport}
+                      onChange={(e) => updateDemo(demo.id, { viewport: e.target.checked ? { width: 1920, height: 1080 } : undefined })}
+                    />
+                    뷰포트 고정
+                  </label>
+                  {demo.viewport && (
+                    <>
+                      <input
+                        type="number" min="320" step="10"
+                        value={demo.viewport.width}
+                        onChange={(e) => updateDemo(demo.id, { viewport: { ...demo.viewport, width: Number(e.target.value) || 1920 } })}
+                        title="너비(px)"
+                      />
+                      <span>×</span>
+                      <input
+                        type="number" min="320" step="10"
+                        value={demo.viewport.height}
+                        onChange={(e) => updateDemo(demo.id, { viewport: { ...demo.viewport, height: Number(e.target.value) || 1080 } })}
+                        title="높이(px)"
+                      />
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
