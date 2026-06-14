@@ -32,15 +32,11 @@ export default function SlideView({ slideId }) {
 
   const kind = slideKind(slide)
 
-  const globalHotspots = [
-    { id: '_g1', x: 92.7, y: 2.8, w: 5.9, h: 3.2, label: '링크', target: { type: 'slide', ref: 'slide-mqcbz60x-35e' } },
-    { id: '_g2', x: 92.8, y: 6.1, w: 5.8, h: 2.7, label: '링크', target: { type: 'slide', ref: 'slide-mqcc2365-fq' } },
-    { id: '_g3', x: 92.9, y: 9.1, w: 5.8, h: 2.9, label: '링크', target: { type: 'slide', ref: 'appendix-glossary' } },
-  ]
+  const globalHotspots = data.globalHotspots || []
   const existingRefs = new Set((slide.hotspots || []).map((h) => h.target?.ref))
   const allHotspots = [
     ...(slide.hotspots || []),
-    ...globalHotspots.filter((g) => !existingRefs.has(g.target.ref)),
+    ...globalHotspots.filter((g) => !existingRefs.has(g.target?.ref)),
   ]
 
   return (

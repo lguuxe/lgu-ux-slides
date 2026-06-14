@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { deckSlideRefs } from '../lib/nav.js'
+import { allSlideRefs } from '../lib/nav.js'
 import { setImageVersion } from '../lib/images.js'
 
 // combined cache-bust key: changes on a content save (_rev) or a Figma refresh (figmaRev)
@@ -174,8 +174,7 @@ export function DataProvider({ children }) {
     try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
   }, [])
 
-  // Ordered slide ids for prev/next (recursive; appendix groups excluded)
-  const orderedSlideIds = useMemo(() => (data ? deckSlideRefs(data.nav) : []), [data])
+  const orderedSlideIds = useMemo(() => (data ? allSlideRefs(data.nav) : []), [data])
 
   const value = {
     data, setData, source, error,

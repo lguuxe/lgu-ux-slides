@@ -673,6 +673,9 @@ button.danger { color: var(--body); }
   border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: move;
 }
 .se-hotspot.active { border-color: var(--accent-sunset); background: rgba(255,122,23,.16); }
+.se-hotspot.global { border-color: #00bcd4; background: rgba(0,188,212,.12); }
+.se-hotspot.global.active { border-color: #00e5ff; background: rgba(0,229,255,.2); }
+.se-hotspot.global span { background: rgba(0,150,170,.7); }
 .se-hs-handle {
   position: absolute; width: 10px; height: 10px; background: var(--accent-sunset);
   border: 1px solid #fff; border-radius: 2px; z-index: 2;
@@ -692,6 +695,7 @@ button.danger { color: var(--body); }
 .se-draft { position: absolute; border: 1px dashed var(--accent-sunset); background: rgba(255,122,23,.12); border-radius: 6px; }
 
 .se-hotspot-list { margin-top: 22px; }
+.global-hs-list h3 { color: #00bcd4; }
 .se-hotspot-list h3 {
   font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1.2px;
   font-size: 12px; color: var(--body-mid); margin-bottom: 12px;

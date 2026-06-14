@@ -27,6 +27,23 @@ export function deckSlideRefs(nav) {
   return out
 }
 
+// All slide refs including appendix — deck first, then appendix in order.
+export function allSlideRefs(nav) {
+  const deck = []
+  const appendix = []
+  const walk = (nodes, isAppendix) => {
+    for (const n of nodes || []) {
+      if (isGroup(n)) {
+        walk(n.children, isAppendix || n.kind === 'appendix')
+      } else {
+        ;(isAppendix ? appendix : deck).push(slideRef(n))
+      }
+    }
+  }
+  walk(nav, false)
+  return [...deck, ...appendix]
+}
+
 // Hierarchical numbers for GROUPS only (appendix excluded). { nodeId: "2.1" }
 export function groupNumbers(nav) {
   const map = {}

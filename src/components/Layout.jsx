@@ -44,7 +44,7 @@ export default function Layout() {
     clearTimeout(hideTimer.current)
     if (navOpen || isDemo) { setChromeHidden(false); return } // open or demo → always visible
     setChromeHidden(false)
-    hideTimer.current = setTimeout(() => { if (!menuOpenRef.current) setChromeHidden(true) }, 2000)
+    hideTimer.current = setTimeout(() => setChromeHidden(true), 2000)
     return () => clearTimeout(hideTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navOpen, isDemo])
