@@ -103,12 +103,10 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 
 /* always-visible nav panel (collapsed mode) */
 .nav-panel {
-  position: absolute; top: 0; left: 0; bottom: 0; z-index: 30;
-  width: 220px; display: flex; flex-direction: column;
-  background: rgba(28, 28, 30, 0.45);
-  -webkit-backdrop-filter: blur(26px) saturate(180%);
-  backdrop-filter: blur(26px) saturate(180%);
-  border-right: 1px solid rgba(255, 255, 255, 0.10);
+  flex: 0 0 220px; width: 220px;
+  display: flex; flex-direction: column;
+  background: var(--canvas-card);
+  border-right: 1px solid var(--hairline);
   animation: nav-panel-in .22s ease both;
 }
 @keyframes nav-panel-in {
@@ -144,7 +142,7 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 }
 .no-item:hover { background: rgba(255, 255, 255, 0.12); color: var(--ink); }
 .no-item.active { background: rgba(255, 255, 255, 0.16); color: var(--ink); }
-.layout.nav-collapsed .toolbar { padding-left: 234px; }
+.layout.nav-collapsed .toolbar { padding-left: 24px; }
 
 .sidebar-head {
   padding: 24px 16px 16px 20px; border-bottom: 1px solid var(--hairline);
