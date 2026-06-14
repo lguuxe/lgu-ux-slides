@@ -275,9 +275,9 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   background: var(--canvas-card);
   transition: padding-left .28s cubic-bezier(0.4, 0, 0.2, 1), opacity .3s ease, transform .3s ease;
 }
-/* collapsed: toolbar floats as a glass card and auto-hides */
+/* collapsed: toolbar as glass card, in-flow */
 .layout.nav-collapsed .toolbar {
-  position: absolute; top: 12px; right: 12px; left: auto;
+  margin: 12px 12px 0;
   padding: 10px 18px; gap: 12px;
   background: rgba(28, 28, 30, 0.35);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
