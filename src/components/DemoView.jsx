@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { useData } from '../data/DataContext.jsx'
-import BackButton from './BackButton.jsx'
 
 export default function DemoView({ demoId }) {
   const { data } = useData()
@@ -31,7 +30,6 @@ export default function DemoView({ demoId }) {
   return (
     <div className="demo-view">
       <div className="toolbar">
-        <BackButton />
         <div className="toolbar-title">{demo.title}</div>
         <div className="toolbar-spacer" />
         <a className="ext-link" href={demo.url} target="_blank" rel="noopener noreferrer">새 탭에서 열기 ↗</a>

@@ -4,7 +4,6 @@ import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback, slideKind } from '../lib/images.js'
 import { ancestorGroups, groupNumbers } from '../lib/nav.js'
 import Hotspot from './Hotspot.jsx'
-import BackButton from './BackButton.jsx'
 
 export default function SlideView({ slideId }) {
   const { data, orderedSlideIds } = useData()
@@ -36,7 +35,6 @@ export default function SlideView({ slideId }) {
   return (
     <div className="slide-view">
       <div className="toolbar">
-        <BackButton />
         <div className="toolbar-title">
           {(() => {
             const numbers = groupNumbers(data.nav)
