@@ -83,21 +83,47 @@ export function DataProvider({ children }) {
   }, [])
 
   // Publish the current data to the server (Blobs) for everyone. Needs the edit
-  // password. Single-editor lock means no conflict handling is needed.
+  // password. Single-editor usage → last write wins (no save-time conflict check).
+  // Retries transient network failures so a flaky connection doesn't lose a save.
   const publish = useCallback(async (password) => {
-    const res = await fetch(SLIDES_FN, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-edit-password': password },
-      body: JSON.stringify(dataRef.current),
-    })
+    const payload = dataRef.current
+    if (!payload || !payload.slides) throw new Error('저장할 데이터가 없습니다.')
+    const headers = { 'content-type': 'application/json', 'x-edit-password': password }
+    const bodyStr = JSON.stringify(payload)
+
+    // Retry only on network-level failures, never on a real HTTP response.
+    let res = null, lastErr = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        res = await fetch(SLIDES_FN, { method: 'POST', headers, body: bodyStr })
+        break
+      } catch (e) {
+        lastErr = e
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+      }
+    }
+    if (!res) throw new Error('네트워크 오류로 저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.' + (lastErr ? ` (${lastErr.message})` : ''))
+
     if (!res.ok) {
       let msg = 'HTTP ' + res.status
       try { msg = (await res.json()).error || msg } catch {}
       throw new Error(msg)
     }
     const j = await res.json()
+
+    // A successful POST means Blobs accepted the write (the function awaits setJSON,
+    // which throws on failure). We do a best-effort read only to pick up the latest
+    // figmaRev — we do NOT compare revisions here, because Blobs can briefly return
+    // the previous value right after a write (read-after-write lag); treating that as
+    // a failure would falsely report a good save as failed.
+    const check = await fetchServer().catch(() => null)
+    const figmaRev = check?.figmaRev ?? payload.figmaRev ?? 0
+
     revRef.current = j.rev
-    setImageVersion(`${j.rev}-${dataRef.current?.figmaRev || 0}`) // bust image caches
+    // Keep the in-memory revision in sync so the NEXT save's base-rev matches the
+    // server (otherwise every subsequent save would look like a conflict).
+    setDataState((prev) => (prev ? { ...prev, _rev: j.rev, figmaRev } : prev))
+    setImageVersion(`${j.rev}-${figmaRev}`) // bust image caches
     localStorage.removeItem(STORAGE_KEY)
     setSource('server')
     return j
@@ -120,6 +146,22 @@ export function DataProvider({ children }) {
   const hasDraft = useCallback(() => {
     try { return !!localStorage.getItem(STORAGE_KEY) } catch { return false }
   }, [])
+  // Is the stored draft based on the revision currently published? A draft built on
+  // an OLDER revision (server moved ahead in another tab/device) is stale — resuming
+  // and saving it would clobber the newer published copy, so we drop it instead.
+  // Returns 'none' | 'current' | 'stale'.
+  const draftStatus = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (!stored) return 'none'
+      const parsed = JSON.parse(stored)
+      if (!parsed || !parsed.slides) return 'none'
+      const serverRev = revRef.current
+      // No server copy yet (fresh deck) → any draft is fine to resume.
+      if (serverRev == null) return 'current'
+      return (parsed._rev ?? 0) >= serverRev ? 'current' : 'stale'
+    } catch { return 'none' }
+  }, [])
   const loadDraft = useCallback(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
@@ -138,7 +180,7 @@ export function DataProvider({ children }) {
   const value = {
     data, setData, source, error,
     publish, resetToPublished, importData, orderedSlideIds,
-    hasDraft, loadDraft, discardDraft,
+    hasDraft, draftStatus, loadDraft, discardDraft,
   }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

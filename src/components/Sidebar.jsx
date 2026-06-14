@@ -48,18 +48,18 @@ export default function Sidebar({ onCollapse }) {
         )}
       </div>
 
-      {/* scrollable middle: main tree */}
+      {/* scrollable: main tree + appendix flow together */}
       <nav className="nav nav-scroll">
         <NavTree nodes={mainNodes} numbers={numbers} slides={data.slides} thumbnails />
-      </nav>
 
-      {/* fixed bottom: appendix + live demos */}
-      <div className="nav-fixed">
         {appendixNodes.length > 0 && (
           <NavTree nodes={appendixNodes} numbers={numbers} slides={data.slides} thumbnails />
         )}
+      </nav>
 
-        {(data.demos || []).length > 0 && (
+      {/* fixed bottom: live demos */}
+      {(data.demos || []).length > 0 && (
+        <div className="nav-fixed">
           <div className="nav-section gnb">
             <div className="nav-section-label">
               <span className="ns-icon"><DemoIcon /></span>
@@ -78,8 +78,8 @@ export default function Sidebar({ onCollapse }) {
               })}
             </ul>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="sidebar-foot">
         <Link to="/admin" className="admin-link">

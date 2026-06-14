@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
-import { imageSrcFor, imageFallback, setImageVersion } from '../lib/images.js'
+import { imageSrcFor, imageFallback, setImageVersion, slideKind } from '../lib/images.js'
 import SlidePicker from '../components/SlidePicker.jsx'
 import {
   isGroup, slideRef, groupNumbers, deckSlideRefs, allNavSlideRefs,
@@ -135,16 +135,26 @@ function EditGate({ onAuthed }) {
 }
 
 function EditorInner() {
-  const { data, setData, source, resetToPublished, importData, publish, hasDraft, loadDraft, discardDraft } = useData()
+  const { data, setData, source, resetToPublished, importData, publish, draftStatus, loadDraft, discardDraft } = useData()
 
-  // resume an unsaved local draft only inside the editor (never on viewer pages)
+  // Resume an unsaved local draft — but only once the published copy has loaded, so
+  // we can tell a continuable draft from a stale one. A stale draft (built on an
+  // older revision because a newer save happened elsewhere) is discarded rather than
+  // resumed, so it can never silently overwrite the newer published copy.
+  const resumedRef = useRef(false)
   useEffect(() => {
-    if (hasDraft()) {
+    if (resumedRef.current || source === 'loading') return
+    resumedRef.current = true
+    const status = draftStatus()
+    if (status === 'current') {
       if (confirm('이 브라우저에 저장하지 않은 이전 편집 내용이 있습니다. 불러올까요?\n(취소하면 최신 게시본으로 시작하며 그 초안은 삭제됩니다.)')) loadDraft()
       else discardDraft()
+    } else if (status === 'stale') {
+      discardDraft()
+      alert('이 브라우저의 임시 편집본은 더 오래된 버전이라 안전을 위해 최신 게시본으로 시작합니다.')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [source])
 
   const [selectedId, setSelectedId] = useState(() => {
     const first = deckSlideRefs(data.nav)[0]
@@ -657,80 +667,122 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
   }
 
   const slideOptions = Object.keys(data.slides)
+  const kind = slideKind(slide)
+
+  // ---- this slide's own shortcuts (shown on the right rail, only on this screen) ----
+  const slideShortcuts = slide.shortcuts || []
+  const setSlideShortcuts = (next) => updateSlide({ shortcuts: next.length ? next : undefined })
+  const addSlideShortcut = () => setSlideShortcuts([...slideShortcuts, { id: uid('sc'), label: '바로가기', target: { type: 'slide', ref: '' } }])
+  const updateSlideShortcut = (id, patch) => setSlideShortcuts(slideShortcuts.map((s) => (s.id === id ? { ...s, ...patch } : s)))
+  const updateSlideShortcutTarget = (id, patch) => setSlideShortcuts(slideShortcuts.map((s) => (s.id === id ? { ...s, target: { ...s.target, ...patch } } : s)))
+  const deleteSlideShortcut = (id) => setSlideShortcuts(slideShortcuts.filter((s) => s.id !== id))
 
   return (
     <div className="slide-editor">
       <div className="se-fields">
-        <label>제목 <input value={slide.title} onChange={(e) => updateSlide({ title: e.target.value })} /></label>
+        <label className="se-link-field">제목 <input value={slide.title} onChange={(e) => updateSlide({ title: e.target.value })} style={{ width: '100%' }} /></label>
         <span className="se-id">id: {slideId}</span>
       </div>
-      <div className="se-fields">
-        <label className="se-link-field">
-          Figma 프레임 링크
-          <div className="se-link-row">
-            <input
-              value={linkInput}
-              onChange={(e) => setLinkInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') applyLink() }}
-              placeholder="https://www.figma.com/design/…?node-id=1-23"
-            />
-            <button type="button" className="se-apply" onClick={applyLink}>적용</button>
-          </div>
-        </label>
-        {!slide.figmaUrl && (
-          <label>이미지 경로 <input value={slide.image || ''} onChange={(e) => updateSlide({ image: e.target.value })} placeholder="/slides/…" /></label>
-        )}
+
+      <div className="se-typebar">
+        {[['figma', '이미지(Figma)'], ['video', '동영상'], ['iframe', 'iframe'], ['html', 'HTML']].map(([t, label]) => (
+          <button key={t} type="button" className={'se-type-btn' + (kind === t ? ' active' : '')} onClick={() => updateSlide({ type: t })}>{label}</button>
+        ))}
       </div>
-      <div className="se-fields">
-        <label style={{ flex: 1 }}>
-          동영상 (업로드 또는 URL · 있으면 이미지 대신 재생)
-          <div className="se-link-row">
-            <input
-              value={slide.video || ''}
-              onChange={(e) => updateSlide({ video: e.target.value || undefined })}
-              placeholder="로컬 업로드 또는 https://…/video.mp4"
-            />
-            <label className={'se-apply' + (uploadProg ? ' busy' : '')} style={{ cursor: 'pointer' }}>
-              {uploadProg ? `${uploadProg.done}/${uploadProg.total}` : '업로드'}
-              <input type="file" accept="video/*" hidden disabled={!!uploadProg}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) onVideoFile(f); e.target.value = '' }} />
-            </label>
-            {slide.video && (
-              <button type="button" className="se-apply" title="동영상 제거" onClick={() => updateSlide({ video: undefined })}>✕</button>
-            )}
-          </div>
-        </label>
-        <label>
-          이미지 맞춤
-          <select value={slide.fit || 'contain'} onChange={(e) => updateSlide({ fit: e.target.value })}>
-            <option value="contain">전체 보기 (기본)</option>
-            <option value="width">폭 채우기 · 세로 스크롤</option>
-            <option value="height">높이 채우기 · 가로 스크롤</option>
-          </select>
-        </label>
-      </div>
-      <div className="se-fields">
-        <label style={{ flex: 1 }}>
-          iframe URL (선택 · 있으면 이 슬라이드가 라이브 사이트로 표시)
-          <input
-            value={slide.iframeUrl || ''}
-            onChange={(e) => updateSlide({ iframeUrl: e.target.value || undefined })}
-            placeholder="https://… (임베드할 웹페이지)"
-            style={{ width: '100%' }}
-          />
-        </label>
-      </div>
+
+      {kind === 'figma' && (
+        <div className="se-fields">
+          <label className="se-link-field">
+            Figma 프레임 링크
+            <div className="se-link-row">
+              <input
+                value={linkInput}
+                onChange={(e) => setLinkInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyLink() }}
+                placeholder="https://www.figma.com/design/…?node-id=1-23"
+              />
+              <button type="button" className="se-apply" onClick={applyLink}>적용</button>
+            </div>
+          </label>
+          {!slide.figmaUrl && (
+            <label>이미지 경로 <input value={slide.image || ''} onChange={(e) => updateSlide({ image: e.target.value })} placeholder="/slides/…" /></label>
+          )}
+          <label>
+            맞춤
+            <select value={slide.fit || 'contain'} onChange={(e) => updateSlide({ fit: e.target.value })}>
+              <option value="contain">전체 보기</option>
+              <option value="width">폭 채우기 ↕</option>
+              <option value="height">높이 채우기 ↔</option>
+            </select>
+          </label>
+        </div>
+      )}
+
+      {kind === 'video' && (
+        <div className="se-fields">
+          <label style={{ flex: 1 }}>
+            동영상 (로컬 업로드 또는 URL)
+            <div className="se-link-row">
+              <input value={slide.video || ''} onChange={(e) => updateSlide({ video: e.target.value || undefined })} placeholder="로컬 업로드 또는 https://…/video.mp4" />
+              <label className={'se-apply' + (uploadProg ? ' busy' : '')} style={{ cursor: 'pointer' }}>
+                {uploadProg ? `${uploadProg.done}/${uploadProg.total}` : '업로드'}
+                <input type="file" accept="video/*" hidden disabled={!!uploadProg}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) onVideoFile(f); e.target.value = '' }} />
+              </label>
+              {slide.video && <button type="button" className="se-apply" title="동영상 제거" onClick={() => updateSlide({ video: undefined })}>✕</button>}
+            </div>
+          </label>
+        </div>
+      )}
+
+      {kind === 'iframe' && (
+        <div className="se-fields">
+          <label style={{ flex: 1 }}>
+            iframe URL
+            <input value={slide.iframeUrl || ''} onChange={(e) => updateSlide({ iframeUrl: e.target.value || undefined })} placeholder="https://… (임베드할 웹페이지)" style={{ width: '100%' }} />
+          </label>
+          <label>
+            기본 폭 (px)
+            <input type="number" min="0" step="20" value={slide.iframeWidth || ''}
+              onChange={(e) => updateSlide({ iframeWidth: e.target.value ? Number(e.target.value) : undefined })}
+              placeholder="전체 폭" style={{ width: 110 }} />
+          </label>
+        </div>
+      )}
+
+      {kind === 'html' && (
+        <div className="se-fields">
+          <label style={{ flex: 1 }}>
+            HTML
+            <textarea className="se-html" value={slide.html || ''} onChange={(e) => updateSlide({ html: e.target.value || undefined })}
+              placeholder="<!doctype html> … 자유롭게 HTML/CSS/JS (격리된 프레임에서 실행)" spellCheck={false} />
+          </label>
+          <label>
+            기본 폭 (px)
+            <input type="number" min="0" step="20" value={slide.htmlWidth || ''}
+              onChange={(e) => updateSlide({ htmlWidth: e.target.value ? Number(e.target.value) : undefined })}
+              placeholder="전체 폭" style={{ width: 110 }} />
+          </label>
+        </div>
+      )}
 
       <p className="se-hint">
-        Figma 링크를 넣고 <b>«적용»</b>을 누르면 아래 미리보기가 그 프레임 캡쳐로 바뀝니다(아직 미게시).
-        <b>저장</b>을 눌러야 발표 화면에 반영됩니다. · 피그마 디자인 자체를 수정했다면 우상단 <b>«⟳ Figma 최신화»</b> 를 누르면 전체가 다시 캡쳐돼 바로 반영됩니다(저장 불필요, 보는 쪽은 새로고침).
-        · 이미지 위에서 <b>드래그</b>하면 클릭영역(링크)이 만들어지고, 만든 영역을 클릭하면 아래에서 링크 대상을 지정할 수 있어요.
+        {kind === 'figma' && <>Figma 링크 + <b>«적용»</b>으로 캡쳐. 피그마 수정은 우상단 <b>«⟳ Figma 최신화»</b>. · 이미지 위 <b>드래그</b>로 클릭영역 생성, 본체/핸들 드래그로 이동·크기조절.</>}
+        {kind === 'video' && <>동영상을 업로드하거나 URL을 넣으세요. 발표 화면에서 플레이어로 재생됩니다.</>}
+        {kind === 'iframe' && <>이 슬라이드가 라이브 웹페이지로 표시됩니다. (사이트가 임베드를 막아두면 빈 화면일 수 있어요)</>}
+        {kind === 'html' && <>작성한 HTML이 격리된 프레임에서 그대로 렌더됩니다.</>}
+        {' '}변경 후 <b>저장</b>을 눌러야 반영됩니다.
       </p>
 
-      {slide.iframeUrl ? (
+      {kind === 'iframe' || kind === 'html' ? (
         <div className="se-iframe-preview">
-          <iframe src={slide.iframeUrl} title={slide.title} />
-          <div className="se-iframe-note">iframe 슬라이드 — 발표 화면에서 이 웹페이지가 그대로 표시됩니다. (클릭영역은 적용되지 않음)</div>
+          <iframe {...(kind === 'iframe' ? { src: slide.iframeUrl } : { srcDoc: slide.html || '' })} title={slide.title} />
+          <div className="se-iframe-note">발표 화면에서 위 내용이 그대로 표시됩니다. (클릭영역은 적용되지 않음)</div>
+        </div>
+      ) : kind === 'video' ? (
+        <div className="se-canvas-scroll">
+          {slide.video ? <video src={slide.video} poster={imageSrcFor(slide)} controls className="slide-video" style={{ maxHeight: '56vh' }} />
+            : <div className="se-iframe-note" style={{ padding: 24 }}>동영상을 업로드하거나 URL을 입력하세요.</div>}
         </div>
       ) : (
       <div className="se-canvas-scroll">
@@ -787,6 +839,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
       </div>
       )}
 
+      {kind === 'figma' && (
       <div className="se-hotspot-list">
         <h3>클릭영역 / 링크 ({(slide.hotspots || []).length})</h3>
         {(slide.hotspots || []).length === 0 && <p className="muted">아직 없습니다. 위 이미지에서 드래그해 추가하세요.</p>}
@@ -821,6 +874,41 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
           </div>
         ))}
       </div>
+      )}
+
+      {/* this screen's own right-rail shortcuts (added on top of the global ones) */}
+      <div className="se-hotspot-list">
+        <div className="se-sc-head">
+          <h3>이 화면만의 바로가기 ({slideShortcuts.length})</h3>
+          <button className="se-apply" onClick={addSlideShortcut}>+ 추가</button>
+        </div>
+        <p className="muted" style={{ marginTop: 0 }}>전역 바로가기 아래에 이 슬라이드에서만 우측에 표시됩니다.</p>
+        {slideShortcuts.map((s) => (
+          <div key={s.id} className="hs-edit">
+            <input className="hs-label" value={s.label} onChange={(e) => updateSlideShortcut(s.id, { label: e.target.value })} placeholder="버튼 이름" />
+            <select value={s.target.type} onChange={(e) => updateSlideShortcutTarget(s.id, { type: e.target.value, ref: '' })}>
+              <option value="slide">슬라이드/부록</option>
+              <option value="demo">데모(iframe)</option>
+              <option value="url">외부 URL</option>
+            </select>
+            {s.target.type === 'slide' && (
+              <SlidePicker value={s.target.ref} data={data} onChange={(ref) => updateSlideShortcutTarget(s.id, { ref })} />
+            )}
+            {s.target.type === 'demo' && (
+              <select value={s.target.ref} onChange={(e) => updateSlideShortcutTarget(s.id, { ref: e.target.value })}>
+                <option value="">— 데모 선택 —</option>
+                {(data.demos || []).map((d) => (
+                  <option key={d.id} value={d.id}>{d.title}</option>
+                ))}
+              </select>
+            )}
+            {s.target.type === 'url' && (
+              <input value={s.target.ref} onChange={(e) => updateSlideShortcutTarget(s.id, { ref: e.target.value })} placeholder="https://..." />
+            )}
+            <button className="danger" onClick={() => deleteSlideShortcut(s.id)}>삭제</button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -836,7 +924,7 @@ function EdGroup({ node, depth, t }) {
   const [open, setOpen] = useState(node.kind !== 'appendix') // appendix collapsed by default
   const dropCls = t.dropInfo?.id === node.id ? ' drop-' + t.dropInfo.pos : ''
   return (
-    <div className="ed-node">
+    <div className={'ed-node' + (node.kind === 'appendix' ? ' appendix' : '')}>
       <div
         className={'ed-row ed-grouprow' + dropCls + (t.dragId === node.id ? ' dragging' : '')}
         style={{ paddingLeft: 6 + depth * 14 }}

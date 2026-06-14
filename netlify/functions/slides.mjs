@@ -73,12 +73,17 @@ export default async (req) => {
       return json({ error: 'slides 필드가 없는 데이터' }, 400)
     }
 
-    // single-editor lock guarantees one writer at a time, so no conflict check —
-    // just bump the revision (used for image cache-busting).
+    // Single-editor usage (enforced by the edit-lock) → last write wins, no save-time
+    // conflict check. Lost updates from stale browser drafts are prevented earlier, at
+    // editor load (a draft based on an older revision is discarded, not resumed).
     const current = await store.get(KEY, { type: 'json' })
     const newRev = (current?._rev || 0) + 1
     body._rev = newRev
     body.figmaRev = current?.figmaRev || body.figmaRev || 0 // figmaRev is server-managed (only the refresh bumps it)
+    // setJSON resolves only when Blobs has accepted the write (it throws otherwise),
+    // so a successful await IS the confirmation. We deliberately don't read back and
+    // compare here: Blobs reads can briefly return the previous value right after a
+    // write (read-after-write lag), which would falsely report a good save as failed.
     await store.setJSON(KEY, body)
     return json({ ok: true, rev: newRev, savedAt: new Date().toISOString() })
   }

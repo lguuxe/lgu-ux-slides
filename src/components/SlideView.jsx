@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
-import { imageSrcFor, imageFallback } from '../lib/images.js'
+import { imageSrcFor, imageFallback, slideKind } from '../lib/images.js'
 import { ancestorGroups, groupNumbers } from '../lib/nav.js'
 import Hotspot, { useHotspotAction } from './Hotspot.jsx'
 import BackButton from './BackButton.jsx'
@@ -11,7 +11,8 @@ export default function SlideView({ slideId }) {
   const navigate = useNavigate()
   const act = useHotspotAction()
   const slide = data.slides?.[slideId]
-  const shortcuts = data.shortcuts || []
+  // right rail = global shortcuts (every slide) + this slide's own shortcuts
+  const shortcuts = [...(data.shortcuts || []), ...(slide?.shortcuts || [])]
 
   const idx = orderedSlideIds.indexOf(slideId)
   const inDeck = idx !== -1
@@ -32,6 +33,8 @@ export default function SlideView({ slideId }) {
   if (!slide) {
     return <div className="centered">슬라이드 «{slideId}» 를 찾을 수 없습니다.</div>
   }
+
+  const kind = slideKind(slide)
 
   const rail = shortcuts.length > 0 ? (
     <aside className="slide-rail">
@@ -71,19 +74,34 @@ export default function SlideView({ slideId }) {
       </div>
 
       <div className="slide-body">
-        {slide.iframeUrl ? (
-          <div className="slide-iframe-wrap">
+        {kind === 'iframe' || kind === 'html' ? (() => {
+          const frameWidth = kind === 'html' ? slide.htmlWidth : slide.iframeWidth
+          return (
+          <div className={'slide-iframe-wrap' + (frameWidth ? ' is-bounded' : '')}>
+            {kind === 'iframe' && slide.iframeUrl && (
+              <a
+                className="iframe-popout"
+                href={slide.iframeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="새 창에서 열기 (로그인 세션 유지)"
+              >
+                새 창에서 열기 ↗
+              </a>
+            )}
             <iframe
-              src={slide.iframeUrl}
+              {...(kind === 'iframe' ? { src: slide.iframeUrl } : { srcDoc: slide.html || '' })}
               title={slide.title}
-              allow="clipboard-write; fullscreen; microphone; camera; geolocation"
+              allow="clipboard-write; fullscreen; microphone; camera; geolocation; storage-access"
+              style={frameWidth ? { maxWidth: `${frameWidth}px` } : undefined}
             />
           </div>
-        ) : (
+          )
+        })() : (
           <div className={'slide-scroll fit-' + (slide.fit || 'contain')}>
             <div className="slide-stage">
               <div className="slide-canvas">
-                {slide.video ? (
+                {kind === 'video' ? (
                   <video
                     src={slide.video}
                     poster={imageSrcFor(slide)}
@@ -102,7 +120,7 @@ export default function SlideView({ slideId }) {
             </div>
           </div>
         )}
-        {slide.iframeUrl && rail}
+        {(kind === 'iframe' || kind === 'html') && rail}
       </div>
     </div>
   )

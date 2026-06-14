@@ -10,7 +10,8 @@ export default function Layout() {
   // "live" routes embed an iframe (demo, or an iframe-mode slide): keep the toolbar
   // in flow + always visible, since you can't click through the iframe to reveal it.
   const slideId = location.pathname.startsWith('/slide/') ? location.pathname.slice('/slide/'.length) : null
-  const isDemo = location.pathname.startsWith('/demo') || !!(slideId && data?.slides?.[slideId]?.iframeUrl)
+  const liveSlide = slideId && data?.slides?.[slideId]
+  const isDemo = location.pathname.startsWith('/demo') || !!(liveSlide && (liveSlide.iframeUrl || liveSlide.html))
 
   const [navOpen, setNavOpen] = useState(false) // collapsed by default
   const [menuOpen, setMenuOpen] = useState(false)

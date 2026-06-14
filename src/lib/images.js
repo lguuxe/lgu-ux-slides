@@ -5,6 +5,12 @@ export function setImageVersion(v) {
   version = v == null ? '' : String(v)
 }
 
+// What kind of content a slide renders: 'figma' (image) | 'video' | 'iframe' | 'html'.
+// Uses an explicit slide.type if set, else infers from which field is present.
+export function slideKind(slide) {
+  return slide?.type || (slide?.iframeUrl ? 'iframe' : slide?.html ? 'html' : slide?.video ? 'video' : 'figma')
+}
+
 // Resolve the <img> src for a slide.
 // If the slide has a Figma frame link, render it live via the serverless function;
 // otherwise use the slide's static image path.

@@ -167,10 +167,10 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 }
 
 .nav { padding: 14px 10px; }
-/* scrollable middle (main sections only) */
+/* scrollable nav: main tree + appendix flow together */
 .nav-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .nav-scroll::-webkit-scrollbar { width: 0; height: 0; }
-/* fixed bottom region (appendix + demos), never scrolls */
+/* fixed bottom region (live demos), never scrolls */
 .nav-fixed { flex: 0 0 auto; padding: 10px 10px 6px; border-top: 1px solid var(--hairline); }
 .nav-section { margin-bottom: 10px; }
 .nav-section.appendix { margin-bottom: 8px; }
@@ -219,6 +219,9 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 .nt-children-inner { overflow: hidden; min-height: 0; }
 .nt-num { font-family: var(--font-mono); font-size: 11px; letter-spacing: .3px; color: var(--body-mid); flex: 0 0 auto; }
 .nt-group-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Appendix section gets a distinct tinted background so it reads as "extra" material */
+.nt-group.appendix { background: rgba(255, 255, 255, 0.045); border-radius: 10px; padding: 2px 0; margin-top: 8px; }
 
 .nt-slide {
   display: flex; align-items: center; gap: 9px; padding: 6px 10px;
@@ -300,8 +303,22 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 /* ===================== Slide view ===================== */
 .slide-view, .demo-view { display: flex; flex-direction: column; height: 100%; position: relative; }
 .slide-body { flex: 1; display: flex; min-height: 0; }
-.slide-iframe-wrap { flex: 1; min-width: 0; background: #fff; }
+.slide-iframe-wrap { position: relative; flex: 1; min-width: 0; background: #fff; }
 .slide-iframe-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+/* pop the embedded service out to a real tab — there its login session persists
+   (cookies are first-party, not blocked third-party-in-iframe) */
+.iframe-popout {
+  position: absolute; top: 10px; right: 14px; z-index: 4;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px; font-size: 12px; line-height: 1; white-space: nowrap;
+  color: #fff; text-decoration: none; background: rgba(20, 20, 20, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 9999px;
+  backdrop-filter: blur(6px); opacity: .55; transition: opacity .15s, background .15s;
+}
+.iframe-popout:hover { opacity: 1; background: rgba(20, 20, 20, 0.92); }
+/* html slide with a fixed base width → centered on the canvas */
+.slide-iframe-wrap.is-bounded { display: flex; justify-content: center; background: var(--canvas); }
+.slide-iframe-wrap.is-bounded iframe { width: 100%; background: #fff; }
 /* image + shortcut rail centered together, so the rail hugs the image's right edge */
 .slide-stage { display: flex; align-items: flex-start; gap: 12px; max-width: 100%; }
 .slide-rail { flex: 0 0 104px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -494,6 +511,9 @@ button.danger { color: var(--body); }
 .ed-children.open { grid-template-rows: 1fr; }
 .ed-children-inner { overflow: hidden; min-height: 0; }
 
+/* Appendix section in the structure tree gets the same distinct tint as the viewer */
+.ed-node.appendix { background: rgba(255, 255, 255, 0.045); border-radius: 10px; padding: 2px 0; margin-top: 8px; }
+
 .ed-section {
   margin-bottom: 16px; border: 1px solid var(--hairline); border-radius: var(--radius);
   padding: 10px; background: var(--canvas-card);
@@ -560,8 +580,26 @@ button.danger { color: var(--body); }
   border-radius: var(--radius); padding: 9px 12px; font-size: 13px;
 }
 .se-id { font-family: var(--font-mono); font-size: 11px; color: var(--body-mid); }
+.se-sc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.se-sc-head h3 { margin: 0; }
 .se-hint { font-size: 13px; color: var(--body-mid); margin: 6px 0 16px; }
 .se-hint b { color: var(--ink); font-weight: 400; }
+
+.se-typebar { display: inline-flex; gap: 4px; padding: 3px; margin-bottom: 14px;
+  background: var(--canvas-card); border: 1px solid var(--hairline); border-radius: var(--pill); }
+.se-type-btn {
+  background: transparent; color: var(--body-mid); border: 0; border-radius: var(--pill);
+  padding: 6px 16px; font-size: 13px; cursor: pointer; transition: background .15s, color .15s;
+}
+.se-type-btn:hover { color: var(--ink); }
+.se-type-btn.active { background: var(--ink); color: var(--canvas); }
+
+.se-html {
+  width: 100%; min-height: 220px; resize: vertical; box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.5;
+  padding: 12px; border: 1px solid var(--pill-border); border-radius: var(--radius);
+  background: var(--canvas); color: var(--ink);
+}
 
 .se-link-field { flex: 1; }
 .se-link-row { display: flex; gap: 8px; align-items: stretch; }
