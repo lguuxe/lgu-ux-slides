@@ -318,18 +318,7 @@ function EditorInner() {
     try {
       await publish(pw)
     } catch (e) {
-      if (e.conflict) {
-        const ok = confirm(
-          '다른 사람이 먼저 저장했습니다.\n\n' +
-          '확인 = 내 변경으로 덮어쓰기 (상대 변경이 사라질 수 있음)\n' +
-          '취소 = 저장 취소 (↺ 되돌리기로 최신본을 불러온 뒤 다시 편집 권장)'
-        )
-        if (ok) {
-          try { await publish(pw, { force: true }) } catch (e2) { alert('저장 실패: ' + e2.message) }
-        }
-      } else {
-        alert('저장 실패: ' + e.message)
-      }
+      alert('저장 실패: ' + e.message)
     } finally {
       setSaving(false)
     }

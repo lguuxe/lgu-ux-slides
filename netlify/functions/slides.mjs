@@ -73,16 +73,10 @@ export default async (req) => {
       return json({ error: 'slides 필드가 없는 데이터' }, 400)
     }
 
-    // optimistic concurrency: reject if someone else saved since the client loaded
+    // single-editor lock guarantees one writer at a time, so no conflict check —
+    // just bump the revision (used for image cache-busting).
     const current = await store.get(KEY, { type: 'json' })
-    const currentRev = current?._rev || 0
-    const force = req.headers.get('x-force') === '1'
-    const baseRev = req.headers.get('x-base-rev') || ''
-    if (!force && current && String(currentRev) !== String(baseRev)) {
-      return json({ error: 'conflict', currentRev }, 409)
-    }
-
-    const newRev = currentRev + 1
+    const newRev = (current?._rev || 0) + 1
     body._rev = newRev
     body.figmaRev = current?.figmaRev || body.figmaRev || 0 // figmaRev is server-managed (only the refresh bumps it)
     await store.setJSON(KEY, body)

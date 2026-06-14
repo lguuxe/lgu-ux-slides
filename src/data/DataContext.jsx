@@ -82,30 +82,21 @@ export function DataProvider({ children }) {
     })
   }, [])
 
-  // Publish the current draft to the server (Blobs) for everyone. Needs the edit password.
-  // Optimistic concurrency: sends the loaded revision; 409 if someone saved first
-  // (unless opts.force overwrites).
-  const publish = useCallback(async (password, opts = {}) => {
-    const headers = {
-      'content-type': 'application/json',
-      'x-edit-password': password,
-      'x-base-rev': String(revRef.current ?? ''),
-    }
-    if (opts.force) headers['x-force'] = '1'
-    const res = await fetch(SLIDES_FN, { method: 'POST', headers, body: JSON.stringify(dataRef.current) })
-    if (res.status === 409) {
-      const err = new Error('conflict')
-      err.conflict = true
-      try { err.currentRev = (await res.json()).currentRev } catch {}
-      throw err
-    }
+  // Publish the current data to the server (Blobs) for everyone. Needs the edit
+  // password. Single-editor lock means no conflict handling is needed.
+  const publish = useCallback(async (password) => {
+    const res = await fetch(SLIDES_FN, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-edit-password': password },
+      body: JSON.stringify(dataRef.current),
+    })
     if (!res.ok) {
       let msg = 'HTTP ' + res.status
       try { msg = (await res.json()).error || msg } catch {}
       throw new Error(msg)
     }
     const j = await res.json()
-    revRef.current = j.rev // adopt the new revision so subsequent saves are based on it
+    revRef.current = j.rev
     setImageVersion(`${j.rev}-${dataRef.current?.figmaRev || 0}`) // bust image caches
     localStorage.removeItem(STORAGE_KEY)
     setSource('server')
