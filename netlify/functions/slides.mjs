@@ -80,7 +80,6 @@ export default async (req) => {
     body._rev = newRev
     body.figmaRev = current?.figmaRev || body.figmaRev || 0 // figmaRev is server-managed (only the refresh bumps it)
     await store.setJSON(KEY, body)
-    await promoteFigmaDrafts(body.slides)
     return json({ ok: true, rev: newRev, savedAt: new Date().toISOString() })
   }
 

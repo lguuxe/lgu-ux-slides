@@ -351,19 +351,21 @@ function EditorInner() {
     })
 
     try {
+      const begin = await post({ action: 'begin' }).then((r) => r.json())
+      const fr = begin.fr
       let done = 0
-      const CHUNK = 5
+      const CHUNK = 10
       for (const [fileKey, ids] of Object.entries(byFile)) {
         for (let i = 0; i < ids.length; i += CHUNK) {
           const chunk = ids.slice(i, i + CHUNK)
-          await post({ action: 'render', fileKey, nodeIds: chunk, scale: 2 })   // full
-          await post({ action: 'render', fileKey, nodeIds: chunk, scale: 0.5 }) // thumbnail
+          await post({ action: 'render', fr, fileKey, nodeIds: chunk, scale: 2 })   // full
+          await post({ action: 'render', fr, fileKey, nodeIds: chunk, scale: 0.5 }) // thumbnail
           done += chunk.length
           setRefreshProg({ done, total: entries.length })
         }
       }
-      const cr = await post({ action: 'commit' }).then((r) => r.json())
-      if (cr.fr) setImageVersion(`${data._rev || 0}-${cr.fr}`)
+      await post({ action: 'commit', fr })
+      setImageVersion(`${data._rev || 0}-${fr}`)
       alert('최신화 완료! 발표 화면을 새로고침하면 반영됩니다.')
     } catch (e) {
       alert('최신화 실패: ' + e.message)

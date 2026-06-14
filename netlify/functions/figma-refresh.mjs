@@ -1,12 +1,12 @@
 /**
- * Batched Figma refresh — avoids the 78-frames-at-once rate-limit storm.
+ * Batched Figma refresh — builds a {nodeId → CDN url} map per file/scale/figmaRev.
+ * NO image downloads (just the Figma /v1/images call), so each chunk is fast and
+ * stays within the function time limit. The viewer (figma-image) redirects to these
+ * URLs.
  *
- *   POST { action:'render', fileKey, nodeIds:[...], scale }  ← render a small chunk
- *         in ONE Figma /v1/images call, download, store into pub__ (scale≥1) or thumb__ (scale<1)
- *   POST { action:'commit' }  ← bump figmaRev so viewers cache-bust to the new captures
- *
- * The client drives the chunking sequentially (with progress), so each invocation
- * stays small and within the function time limit.
+ *   POST { action:'begin' }                                   → returns next figmaRev (fr)
+ *   POST { action:'render', fr, fileKey, nodeIds, scale }     → merge rendered URLs into the map
+ *   POST { action:'commit', fr }                              → publish figmaRev so viewers switch
  */
 import { getStore } from '@netlify/blobs'
 
@@ -23,41 +23,36 @@ export default async (req) => {
   try { body = await req.json() } catch { return json({ error: 'bad body' }, 400) }
   const main = getStore('ux-report')
 
-  // commit: bump figmaRev (server-managed) so viewer image URLs change
+  if (body.action === 'begin') {
+    const fr = ((await main.get('figma-status', { type: 'json' }))?.fr || 0) + 1
+    return json({ ok: true, fr })
+  }
+
   if (body.action === 'commit') {
-    const status = await main.get('figma-status', { type: 'json' })
-    const fr = ((status?.fr) || 0) + 1
+    const fr = body.fr
     const data = await main.get('slides', { type: 'json' })
     if (data) { data.figmaRev = fr; await main.setJSON('slides', data) }
     await main.setJSON('figma-status', { fr, at: new Date().toISOString() })
     return json({ ok: true, fr })
   }
 
-  // render a chunk
-  const { fileKey, nodeIds, scale } = body
-  if (!fileKey || !Array.isArray(nodeIds) || nodeIds.length === 0) return json({ error: 'bad chunk' }, 400)
+  // render a chunk → build URL map (no downloads)
+  const { fr, fileKey, nodeIds, scale } = body
+  if (!fr || !fileKey || !Array.isArray(nodeIds) || nodeIds.length === 0) return json({ error: 'bad chunk' }, 400)
   const token = process.env.FIGMA_TOKEN
   if (!token) return json({ error: 'no FIGMA_TOKEN' }, 403)
 
-  const api = `https://api.figma.com/v1/images/${fileKey}` +
-    `?ids=${encodeURIComponent(nodeIds.join(','))}&format=png&scale=${scale || 2}`
+  const sc = scale || 2
+  const api = `https://api.figma.com/v1/images/${fileKey}?ids=${encodeURIComponent(nodeIds.join(','))}&format=png&scale=${sc}`
   const r = await fetch(api, { headers: { 'X-Figma-Token': token } })
   if (!r.ok) return json({ error: 'figma ' + r.status }, 502)
   const j = await r.json()
 
-  const imgStore = getStore('figma-img')
-  const prefix = (Number(scale) < 1) ? 'thumb' : 'pub'
-  const entries = Object.entries(j.images || {}).filter(([, u]) => u)
+  const mapStore = getStore('figma-map')
+  const key = `m__${fileKey}__s${sc}__fr${fr}`
+  const map = (await mapStore.get(key, { type: 'json' })) || {}
   let ok = 0
-  await Promise.all(entries.map(async ([nodeId, u]) => {
-    try {
-      const ir = await fetch(u)
-      if (!ir.ok) return
-      const ab = await ir.arrayBuffer()
-      const k = `${prefix}__${fileKey}__${nodeId}`.replace(/:/g, '-')
-      await imgStore.set(k, ab)
-      ok++
-    } catch { /* skip this frame */ }
-  }))
+  for (const [nid, u] of Object.entries(j.images || {})) { if (u) { map[nid] = u; ok++ } }
+  await mapStore.setJSON(key, map)
   return json({ ok: true, rendered: ok, requested: nodeIds.length })
 }
