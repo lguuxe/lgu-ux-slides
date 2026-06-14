@@ -101,10 +101,14 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 /* off-canvas slide: keep fixed width (no reflow), pull left by its own width */
 .layout.nav-collapsed .sidebar { margin-left: calc(-1 * var(--sidebar-w)); }
 
-/* always-visible nav panel (collapsed mode) — floating card */
+/* always-visible nav panel (collapsed mode) — in-flow area + floating card */
 .nav-panel {
-  position: absolute; top: 16px; left: 16px; bottom: 16px; z-index: 30;
-  width: 190px; display: flex; flex-direction: column;
+  flex: 0 0 190px; width: 190px;
+  padding: 12px 0 12px 12px;
+  display: flex; flex-direction: column;
+}
+.nav-panel-card {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
   background: rgba(28, 28, 30, 0.35);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   backdrop-filter: blur(20px) saturate(160%);
@@ -115,7 +119,7 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   transition: opacity .4s ease;
   animation: nav-panel-in .22s ease both;
 }
-.nav-panel:hover { opacity: 1; }
+.nav-panel-card:hover { opacity: 1; }
 @keyframes nav-panel-in {
   from { opacity: 0; transform: translateX(-12px); }
   to { opacity: 0.3; transform: none; }
@@ -154,7 +158,7 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
 }
 .no-item:hover { background: rgba(255, 255, 255, 0.12); color: var(--ink); }
 .no-item.active { background: rgba(255, 255, 255, 0.16); color: var(--ink); }
-.layout.nav-collapsed .toolbar { padding-left: 58px; }
+.layout.nav-collapsed .toolbar { padding-left: 24px; }
 
 .sidebar-head {
   padding: 24px 16px 16px 20px; border-bottom: 1px solid var(--hairline);
