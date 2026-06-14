@@ -33,6 +33,16 @@ export default function SlideView({ slideId }) {
     return <div className="centered">슬라이드 «{slideId}» 를 찾을 수 없습니다.</div>
   }
 
+  const rail = shortcuts.length > 0 ? (
+    <aside className="slide-rail">
+      {shortcuts.map((s) => (
+        <button key={s.id} className="rail-btn" onClick={() => act(s.target)} title={s.label}>
+          {s.label}
+        </button>
+      ))}
+    </aside>
+  ) : null
+
   return (
     <div className="slide-view">
       <div className="toolbar">
@@ -61,35 +71,38 @@ export default function SlideView({ slideId }) {
       </div>
 
       <div className="slide-body">
-        <div className={'slide-scroll fit-' + (slide.fit || 'contain')}>
-          <div className="slide-stage">
-            <div className="slide-canvas">
-              {slide.video ? (
-                <video
-                  src={slide.video}
-                  poster={imageSrcFor(slide)}
-                  controls
-                  playsInline
-                  className="slide-video"
-                />
-              ) : (
-                <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
-              )}
-              {(slide.hotspots || []).map((hs) => (
-                <Hotspot key={hs.id} hotspot={hs} />
-              ))}
-            </div>
-            {shortcuts.length > 0 && (
-              <aside className="slide-rail">
-                {shortcuts.map((s) => (
-                  <button key={s.id} className="rail-btn" onClick={() => act(s.target)} title={s.label}>
-                    {s.label}
-                  </button>
-                ))}
-              </aside>
-            )}
+        {slide.iframeUrl ? (
+          <div className="slide-iframe-wrap">
+            <iframe
+              src={slide.iframeUrl}
+              title={slide.title}
+              allow="clipboard-write; fullscreen; microphone; camera; geolocation"
+            />
           </div>
-        </div>
+        ) : (
+          <div className={'slide-scroll fit-' + (slide.fit || 'contain')}>
+            <div className="slide-stage">
+              <div className="slide-canvas">
+                {slide.video ? (
+                  <video
+                    src={slide.video}
+                    poster={imageSrcFor(slide)}
+                    controls
+                    playsInline
+                    className="slide-video"
+                  />
+                ) : (
+                  <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
+                )}
+                {(slide.hotspots || []).map((hs) => (
+                  <Hotspot key={hs.id} hotspot={hs} />
+                ))}
+              </div>
+              {rail}
+            </div>
+          </div>
+        )}
+        {slide.iframeUrl && rail}
       </div>
     </div>
   )

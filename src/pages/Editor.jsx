@@ -709,6 +709,17 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
           </select>
         </label>
       </div>
+      <div className="se-fields">
+        <label style={{ flex: 1 }}>
+          iframe URL (선택 · 있으면 이 슬라이드가 라이브 사이트로 표시)
+          <input
+            value={slide.iframeUrl || ''}
+            onChange={(e) => updateSlide({ iframeUrl: e.target.value || undefined })}
+            placeholder="https://… (임베드할 웹페이지)"
+            style={{ width: '100%' }}
+          />
+        </label>
+      </div>
 
       <p className="se-hint">
         Figma 링크를 넣고 <b>«적용»</b>을 누르면 아래 미리보기가 그 프레임 캡쳐로 바뀝니다(아직 미게시).
@@ -716,6 +727,12 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
         · 이미지 위에서 <b>드래그</b>하면 클릭영역(링크)이 만들어지고, 만든 영역을 클릭하면 아래에서 링크 대상을 지정할 수 있어요.
       </p>
 
+      {slide.iframeUrl ? (
+        <div className="se-iframe-preview">
+          <iframe src={slide.iframeUrl} title={slide.title} />
+          <div className="se-iframe-note">iframe 슬라이드 — 발표 화면에서 이 웹페이지가 그대로 표시됩니다. (클릭영역은 적용되지 않음)</div>
+        </div>
+      ) : (
       <div className="se-canvas-scroll">
         <div
           ref={canvasRef}
@@ -768,6 +785,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
           )}
         </div>
       </div>
+      )}
 
       <div className="se-hotspot-list">
         <h3>클릭영역 / 링크 ({(slide.hotspots || []).length})</h3>
