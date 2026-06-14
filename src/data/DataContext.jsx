@@ -2,6 +2,9 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useCal
 import { deckSlideRefs } from '../lib/nav.js'
 import { setImageVersion } from '../lib/images.js'
 
+// combined cache-bust key: changes on a content save (_rev) or a Figma refresh (figmaRev)
+const imgVer = (d) => `${d?._rev || 0}-${d?.figmaRev || 0}`
+
 const DataContext = createContext(null)
 const STORAGE_KEY = 'ux-report-data-v2'   // local unsaved draft (editor only)
 const SLIDES_FN = '/.netlify/functions/slides' // Netlify Blobs-backed published copy
@@ -48,13 +51,13 @@ export function DataProvider({ children }) {
         if (cancelled) return
         if (server) {
           revRef.current = server._rev || 0
-          setImageVersion(server._rev || 0)
+          setImageVersion(imgVer(server))
           setDataState(server); setSource('server')
         } else {
           const file = await fetchFile()
           if (cancelled) return
           revRef.current = null
-          setImageVersion(file._rev || '')
+          setImageVersion(imgVer(file))
           setDataState(file); setSource('file')
         }
       } catch (e) {
@@ -103,7 +106,7 @@ export function DataProvider({ children }) {
     }
     const j = await res.json()
     revRef.current = j.rev // adopt the new revision so subsequent saves are based on it
-    setImageVersion(j.rev) // bust image caches to the freshly published captures
+    setImageVersion(`${j.rev}-${dataRef.current?.figmaRev || 0}`) // bust image caches
     localStorage.removeItem(STORAGE_KEY)
     setSource('server')
     return j
@@ -113,10 +116,10 @@ export function DataProvider({ children }) {
   const resetToPublished = useCallback(async () => {
     localStorage.removeItem(STORAGE_KEY)
     const server = await fetchServer()
-    if (server) { revRef.current = server._rev || 0; setImageVersion(server._rev || 0); setDataState(server); setSource('server'); return }
+    if (server) { revRef.current = server._rev || 0; setImageVersion(imgVer(server)); setDataState(server); setSource('server'); return }
     const file = await fetchFile()
     revRef.current = null
-    setImageVersion(file._rev || '')
+    setImageVersion(imgVer(file))
     setDataState(file); setSource('file')
   }, [])
 

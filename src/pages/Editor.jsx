@@ -1,13 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
-import { imageSrcFor, imageFallback } from '../lib/images.js'
+import { imageSrcFor, imageFallback, setImageVersion } from '../lib/images.js'
 import {
   isGroup, slideRef, groupNumbers, deckSlideRefs, allNavSlideRefs,
   findNode, containsId, removeNode, insertNode, updateNode,
 } from '../lib/nav.js'
 
 const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4).toString(36)}`
+
+// parse a Figma frame URL → { fileKey, nodeId } (node-id "1-23" → "1:23")
+function parseFigmaLink(url) {
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    const m = u.pathname.match(/\/(?:file|design|proto)\/([A-Za-z0-9]+)/)
+    let nodeId = u.searchParams.get('node-id')
+    if (nodeId) nodeId = decodeURIComponent(nodeId).replace(/-/g, ':')
+    return m && nodeId ? { fileKey: m[1], nodeId } : null
+  } catch {
+    return null
+  }
+}
 
 const LOCK_FN = '/.netlify/functions/edit-lock'
 
@@ -322,27 +336,51 @@ function EditorInner() {
   }
 
   const [refreshing, setRefreshing] = useState(false)
+  const [refreshProg, setRefreshProg] = useState(null) // { done, total }
 
-  // Pull the latest Figma state for every Figma-linked slide (into drafts).
-  // The user then presses 저장 to publish them to viewers.
+  // Pull the latest Figma state for ALL Figma-linked slides — batched in small
+  // chunks (Figma's multi-id render) so we don't hit rate limits, then commit.
   const refreshFigma = async () => {
-    const urls = Object.values(data.slides || {}).map((s) => s.figmaUrl).filter(Boolean)
-    if (!urls.length) return alert('Figma 링크가 있는 슬라이드가 없습니다.')
-    if (!confirm(`Figma 링크 ${urls.length}개를 최신 상태로 다시 캡쳐할까요?\n(완료 후 「저장」을 눌러야 발표 화면에 반영됩니다.)`)) return
+    const pw = sessionStorage.getItem('edit-pw')
+    if (!pw) { alert('편집 세션이 없습니다. 다시 진입해 주세요.'); return }
+    const entries = []
+    for (const s of Object.values(data.slides || {})) {
+      const p = parseFigmaLink(s.figmaUrl)
+      if (p) entries.push(p)
+    }
+    if (!entries.length) return alert('Figma 링크가 있는 슬라이드가 없습니다.')
+    if (!confirm(`Figma ${entries.length}개 슬라이드를 최신 상태로 다시 캡쳐할까요?\n(1~2분 정도 걸릴 수 있어요.)`)) return
+
     setRefreshing(true)
+    setRefreshProg({ done: 0, total: entries.length })
+    const byFile = {}
+    for (const e of entries) (byFile[e.fileKey] ||= []).push(e.nodeId)
+
+    const post = (payload) => fetch('/.netlify/functions/figma-refresh', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-edit-password': pw },
+      body: JSON.stringify(payload),
+    })
+
     try {
-      const t = Date.now()
-      const results = await Promise.allSettled(
-        urls.map((u) => fetch(imageSrcFor({ figmaUrl: u }, { refresh: true, bust: t })))
-      )
-      const ok = results.filter((r) => r.status === 'fulfilled' && r.value.ok).length
-      // touch data so it's marked unsaved (drafts updated, JSON unchanged)
-      setData((d) => ({ ...d }))
-      alert(`최신 캡쳐 완료: ${ok}/${urls.length}. 「저장」을 누르면 발표 화면에 반영됩니다.`)
+      let done = 0
+      const CHUNK = 5
+      for (const [fileKey, ids] of Object.entries(byFile)) {
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const chunk = ids.slice(i, i + CHUNK)
+          await post({ action: 'render', fileKey, nodeIds: chunk, scale: 2 })   // full
+          await post({ action: 'render', fileKey, nodeIds: chunk, scale: 0.5 }) // thumbnail
+          done += chunk.length
+          setRefreshProg({ done, total: entries.length })
+        }
+      }
+      const cr = await post({ action: 'commit' }).then((r) => r.json())
+      if (cr.fr) setImageVersion(`${data._rev || 0}-${cr.fr}`)
+      alert('최신화 완료! 발표 화면을 새로고침하면 반영됩니다.')
     } catch (e) {
       alert('최신화 실패: ' + e.message)
     } finally {
       setRefreshing(false)
+      setRefreshProg(null)
     }
   }
 
@@ -374,8 +412,8 @@ function EditorInner() {
           {source === 'local' ? '● 저장 안 된 변경' : ''}
         </span>
         <div className="editor-top-actions">
-          <button onClick={refreshFigma} disabled={refreshing} title="모든 Figma 링크를 최신 상태로 다시 캡쳐(이후 저장 필요)">
-            {refreshing ? '최신화 중…' : '⟳ Figma 최신화'}
+          <button onClick={refreshFigma} disabled={refreshing} title="모든 Figma 링크를 최신 상태로 다시 캡쳐">
+            {refreshing ? `최신화 중… ${refreshProg ? `${refreshProg.done}/${refreshProg.total}` : ''}` : '⟳ Figma 최신화'}
           </button>
           <button onClick={exportJson} title="백업 파일로 내보내기">⬇ 내보내기</button>
           <button onClick={() => fileInputRef.current?.click()} title="백업 파일 불러오기">⬆ 불러오기</button>
@@ -626,7 +664,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots }) {
 
       <p className="se-hint">
         Figma 링크를 넣고 <b>«적용»</b>을 누르면 아래 미리보기가 그 프레임 캡쳐로 바뀝니다(아직 미게시).
-        <b>저장</b>을 눌러야 발표 화면에 반영됩니다. · 피그마에서 디자인을 수정했다면 우상단 <b>«⟳ Figma 최신화»</b> 로 모두 다시 가져온 뒤 저장하세요.
+        <b>저장</b>을 눌러야 발표 화면에 반영됩니다. · 피그마 디자인 자체를 수정했다면 우상단 <b>«⟳ Figma 최신화»</b> 를 누르면 전체가 다시 캡쳐돼 바로 반영됩니다(저장 불필요, 보는 쪽은 새로고침).
         · 이미지 위에서 <b>드래그</b>하면 클릭영역(링크)이 만들어지고, 만든 영역을 클릭하면 아래에서 링크 대상을 지정할 수 있어요.
       </p>
 
