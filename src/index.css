@@ -30,7 +30,7 @@
   --pill: 9999px;
 }
 
-* { box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none; } /* hide scrollbars everywhere */
+* { box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none; outline: none; } /* hide scrollbars & focus outlines */
 *::-webkit-scrollbar { width: 0; height: 0; display: none; }
 html, body, #root { height: 100%; margin: 0; }
 body {
