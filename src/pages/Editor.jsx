@@ -294,14 +294,6 @@ function EditorInner() {
     setData((d) => ({ ...d, demos: d.demos.filter((x) => x.id !== id) }))
   }
 
-  // ---------- global hotspots (appear on every slide) ----------
-  const globalHotspots = data.globalHotspots || []
-  const updateGlobalHotspots = (next) => setData((d) => ({ ...d, globalHotspots: next }))
-  const addGlobalHotspot = (hs) => updateGlobalHotspots([...globalHotspots, hs])
-  const updateGlobalHs = (id, patch) => updateGlobalHotspots(globalHotspots.map((h) => (h.id === id ? { ...h, ...patch } : h)))
-  const updateGlobalHsTarget = (id, patch) => updateGlobalHotspots(globalHotspots.map((h) => (h.id === id ? { ...h, target: { ...h.target, ...patch } } : h)))
-  const deleteGlobalHs = (id) => updateGlobalHotspots(globalHotspots.filter((h) => h.id !== id))
-
   // ---------- import / export ----------
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -519,11 +511,7 @@ function EditorInner() {
               data={data}
               updateSlide={updateSlide}
               updateHotspots={updateHotspots}
-              globalHotspots={globalHotspots}
-              addGlobalHotspot={addGlobalHotspot}
-              updateGlobalHs={updateGlobalHs}
-              updateGlobalHsTarget={updateGlobalHsTarget}
-              deleteGlobalHs={deleteGlobalHs}
+              setData={setData}
             />
           )}
         </section>
@@ -533,7 +521,7 @@ function EditorInner() {
 }
 
 // ===================== Slide detail editor =====================
-function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots, globalHotspots, addGlobalHotspot, updateGlobalHs, updateGlobalHsTarget, deleteGlobalHs }) {
+function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots, setData }) {
   const canvasRef = useRef(null)
   const [draft, setDraft] = useState(null) // rectangle being drawn
   const [selectedHs, setSelectedHs] = useState(null)
@@ -621,11 +609,8 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots, global
     setSelectedHs(hs.id)
   }
 
-  const isGlobal = (id) => globalHotspots.some((h) => h.id === id)
-  const updateHs = (id, patch) => {
-    if (isGlobal(id)) updateGlobalHs(id, patch)
-    else updateHotspots(slide.hotspots.map((h) => (h.id === id ? { ...h, ...patch } : h)))
-  }
+  const updateHs = (id, patch) =>
+    updateHotspots(slide.hotspots.map((h) => (h.id === id ? { ...h, ...patch } : h)))
 
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n))
   const startHsDrag = (e, hs, mode, handle) => {
@@ -655,13 +640,10 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots, global
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
   }
-  const updateHsTarget = (id, patch) => {
-    if (isGlobal(id)) updateGlobalHsTarget(id, patch)
-    else updateHotspots(slide.hotspots.map((h) => (h.id === id ? { ...h, target: { ...h.target, ...patch } } : h)))
-  }
+  const updateHsTarget = (id, patch) =>
+    updateHotspots(slide.hotspots.map((h) => (h.id === id ? { ...h, target: { ...h.target, ...patch } } : h)))
   const deleteHs = (id) => {
-    if (isGlobal(id)) deleteGlobalHs(id)
-    else updateHotspots(slide.hotspots.filter((h) => h.id !== id))
+    updateHotspots(slide.hotspots.filter((h) => h.id !== id))
     if (selectedHs === id) setSelectedHs(null)
   }
 
@@ -816,23 +798,6 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots, global
               ))}
             </div>
           ))}
-          {globalHotspots.map((hs) => (
-            <div
-              key={hs.id}
-              className={'se-hotspot global' + (selectedHs === hs.id ? ' active' : '')}
-              style={{ left: `${hs.x}%`, top: `${hs.y}%`, width: `${hs.w}%`, height: `${hs.h}%` }}
-              onMouseDown={(e) => startHsDrag(e, hs, 'move')}
-            >
-              <span>{hs.label}</span>
-              {selectedHs === hs.id && ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map((h) => (
-                <span
-                  key={h}
-                  className={'se-hs-handle h-' + h}
-                  onMouseDown={(e) => startHsDrag(e, hs, 'resize', h)}
-                />
-              ))}
-            </div>
-          ))}
           {draft && (
             <div
               className="se-draft"
@@ -882,42 +847,31 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots, global
             <button className="danger" onClick={(e) => { e.stopPropagation(); deleteHs(hs.id) }}>삭제</button>
           </div>
         ))}
-      </div>
-      )}
-
-      {kind === 'figma' && globalHotspots.length > 0 && (
-      <div className="se-hotspot-list global-hs-list">
-        <h3>글로벌 링크 영역 ({globalHotspots.length})</h3>
-        {globalHotspots.map((hs) => (
-          <div
-            key={hs.id}
-            className={'hs-edit' + (selectedHs === hs.id ? ' active' : '')}
-            onClick={() => setSelectedHs(hs.id)}
+        {(slide.hotspots || []).length > 0 && (
+          <button
+            type="button"
+            style={{ marginTop: 8, width: '100%' }}
+            onClick={() => {
+              const hs = slide.hotspots
+              if (!confirm(`이 슬라이드의 링크 ${hs.length}개를 모든 슬라이드에 복사합니다.`)) return
+              setData((d) => {
+                const next = { ...d, slides: { ...d.slides } }
+                for (const [id, s] of Object.entries(next.slides)) {
+                  if (id === slideId) continue
+                  const existing = s.hotspots || []
+                  const existingRefs = new Set(existing.map((h) => h.target?.ref))
+                  const toAdd = hs
+                    .filter((h) => !existingRefs.has(h.target?.ref))
+                    .map((h) => ({ ...h, id: uid('hs') }))
+                  if (toAdd.length) next.slides[id] = { ...s, hotspots: [...existing, ...toAdd] }
+                }
+                return next
+              })
+            }}
           >
-            <input className="hs-label" value={hs.label} onChange={(e) => updateHs(hs.id, { label: e.target.value })} placeholder="라벨" />
-            <select value={hs.target.type} onChange={(e) => updateHsTarget(hs.id, { type: e.target.value, ref: '' })}>
-              <option value="slide">슬라이드/부록</option>
-              <option value="demo">데모(iframe)</option>
-              <option value="url">외부 URL</option>
-            </select>
-            {hs.target.type === 'slide' && (
-              <SlidePicker value={hs.target.ref} data={data} onChange={(ref) => updateHsTarget(hs.id, { ref })} />
-            )}
-            {hs.target.type === 'demo' && (
-              <select value={hs.target.ref} onChange={(e) => updateHsTarget(hs.id, { ref: e.target.value })}>
-                <option value="">— 데모 선택 —</option>
-                {(data.demos || []).map((d) => (
-                  <option key={d.id} value={d.id}>{d.title}</option>
-                ))}
-              </select>
-            )}
-            {hs.target.type === 'url' && (
-              <input value={hs.target.ref} onChange={(e) => updateHsTarget(hs.id, { ref: e.target.value })} placeholder="https://..." />
-            )}
-            <span className="hs-coords">{hs.x},{hs.y} · {hs.w}×{hs.h}</span>
-            <button className="danger" onClick={(e) => { e.stopPropagation(); deleteHs(hs.id) }}>삭제</button>
-          </div>
-        ))}
+            모든 슬라이드에 복사
+          </button>
+        )}
       </div>
       )}
 

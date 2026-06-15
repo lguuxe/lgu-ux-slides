@@ -32,13 +32,6 @@ export default function SlideView({ slideId }) {
 
   const kind = slideKind(slide)
 
-  const globalHotspots = data.globalHotspots || []
-  const existingRefs = new Set((slide.hotspots || []).map((h) => h.target?.ref))
-  const allHotspots = [
-    ...(slide.hotspots || []),
-    ...globalHotspots.filter((g) => !existingRefs.has(g.target?.ref)),
-  ]
-
   return (
     <div className="slide-view">
       <div className="toolbar">
@@ -104,7 +97,7 @@ export default function SlideView({ slideId }) {
                 ) : (
                   <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
                 )}
-                {allHotspots.map((hs) => (
+                {(slide.hotspots || []).map((hs) => (
                   <Hotspot key={hs.id} hotspot={hs} />
                 ))}
               </div>
