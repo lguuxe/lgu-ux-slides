@@ -759,7 +759,7 @@ function SlideEditor({ slideId, slide, data, updateSlide, updateHotspots, setDat
             : <div className="se-iframe-note" style={{ padding: 24 }}>동영상을 업로드하거나 URL을 입력하세요.</div>}
         </div>
       ) : (
-      <div className="se-canvas-scroll">
+      <div className={'se-canvas-scroll se-fit-' + (slide.fit || 'contain')}>
         <div
           ref={canvasRef}
           className="se-canvas"
