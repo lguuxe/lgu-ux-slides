@@ -46,6 +46,14 @@ export function DataProvider({ children }) {
   useEffect(() => {
     let cancelled = false
     async function load() {
+      if (window.__EMBEDDED_DATA__) {
+        if (cancelled) return
+        const embedded = window.__EMBEDDED_DATA__
+        revRef.current = null
+        setImageVersion(imgVer(embedded))
+        setDataState(embedded); setSource('file')
+        return
+      }
       const server = await fetchServer()
       try {
         if (cancelled) return
