@@ -669,10 +669,10 @@ button.danger { color: var(--body); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .se-canvas img { display: block; max-width: 100%; max-height: 60vh; width: auto; }
-.se-fit-width { overflow-y: auto; overflow-x: hidden; max-height: 65vh; }
+.se-fit-width { overflow-y: auto; overflow-x: hidden; max-height: 65vh; align-items: flex-start; }
 .se-fit-width .se-canvas { width: 100%; }
 .se-fit-width .se-canvas img { width: 100%; height: auto; max-height: none; }
-.se-fit-height { overflow-x: auto; overflow-y: hidden; max-height: 65vh; justify-content: flex-start; }
+.se-fit-height { overflow-x: auto; overflow-y: hidden; max-height: 65vh; align-items: flex-start; justify-content: flex-start; }
 .se-fit-height .se-canvas img { height: 60vh; width: auto; max-width: none; max-height: none; }
 .se-hotspot {
   position: absolute; border: 1px solid var(--ink); background: rgba(255,255,255,.1);
