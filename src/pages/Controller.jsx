@@ -71,13 +71,15 @@ function NavItem({ node, depth, numbers, slides, currentId, onGo }) {
   }
   const ref = slideRef(node)
   const s = slides?.[ref]
+  const src = s ? imageSrcFor(s, { thumb: true }) : null
   return (
     <div
       className={'ctrl-nav-slide' + (ref === currentId ? ' active' : '')}
       style={{ paddingLeft: 12 + depth * 14 }}
       onClick={() => onGo(ref)}
     >
-      {s?.title || ref}
+      {src && <img className="ctrl-nav-thumb" src={src} alt="" draggable={false} />}
+      <span className="ctrl-nav-slide-title">{s?.title || ref}</span>
     </div>
   )
 }
