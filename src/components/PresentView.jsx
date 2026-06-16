@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback, slideKind } from '../lib/images.js'
-import { onNav } from '../lib/broadcast.js'
+import { onMessage } from '../lib/broadcast.js'
 import Hotspot from './Hotspot.jsx'
 
 export default function PresentView() {
@@ -10,8 +10,12 @@ export default function PresentView() {
   const { data } = useData()
   const navigate = useNavigate()
   const slide = data?.slides?.[id]
+  const [cursor, setCursor] = useState(null)
 
-  useEffect(() => onNav((path) => navigate(path, { replace: true })), [navigate])
+  useEffect(() => onMessage((d) => {
+    if (d?.type === 'nav') navigate(d.path, { replace: true })
+    if (d?.type === 'cursor') setCursor(d.x != null ? { x: d.x, y: d.y } : null)
+  }), [navigate])
 
   if (!slide) return <div className="centered">슬라이드를 찾을 수 없습니다.</div>
 
@@ -46,6 +50,7 @@ export default function PresentView() {
             {(slide.hotspots || []).map((hs) => (
               <Hotspot key={hs.id} hotspot={hs} />
             ))}
+            {cursor && <div className="present-cursor" style={{ left: cursor.x + '%', top: cursor.y + '%' }} />}
           </div>
         </div>
       )}

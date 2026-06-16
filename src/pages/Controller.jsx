@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useData } from '../data/DataContext.jsx'
 import { imageSrcFor, imageFallback, slideKind } from '../lib/images.js'
 import { ancestorGroups, groupNumbers, isGroup, slideRef } from '../lib/nav.js'
-import { sendNav } from '../lib/broadcast.js'
+import { sendNav, sendCursor, hideCursor } from '../lib/broadcast.js'
 import Hotspot from '../components/Hotspot.jsx'
 
 function Timer() {
@@ -35,12 +35,54 @@ function Timer() {
   )
 }
 
-function SlidePreview({ slide, slideId, label, dimmed }) {
-  if (!slide) return <div className={'ctrl-preview' + (dimmed ? ' dimmed' : '')}><div className="ctrl-preview-empty">{label}</div></div>
+function CurrentSlide({ slide, goTo }) {
+  const canvasRef = useRef(null)
+  if (!slide) return <div className="ctrl-current"><div className="ctrl-preview-empty">슬라이드 없음</div></div>
+  const kind = slideKind(slide)
+
+  const onMove = (e) => {
+    const r = canvasRef.current?.getBoundingClientRect()
+    if (!r) return
+    sendCursor(((e.clientX - r.left) / r.width) * 100, ((e.clientY - r.top) / r.height) * 100)
+  }
+  const onLeave = () => hideCursor()
+
+  const onHsClick = (hs) => {
+    if (hs.target?.type === 'slide' && hs.target.ref) goTo(hs.target.ref)
+    else if (hs.target?.type === 'demo' && hs.target.ref) window.open(`/demo/${hs.target.ref}`, '_blank')
+    else if (hs.target?.type === 'url' && hs.target.ref) window.open(hs.target.ref, '_blank')
+  }
+
+  return (
+    <div className="ctrl-current">
+      <div className="ctrl-preview-label">현재 슬라이드</div>
+      {kind === 'figma' || kind === 'video' ? (
+        <div className="ctrl-current-img" ref={canvasRef} onMouseMove={onMove} onMouseLeave={onLeave}>
+          <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
+          {(slide.hotspots || []).map((hs) => (
+            <div
+              key={hs.id}
+              className="ctrl-hotspot"
+              style={{ left: hs.x + '%', top: hs.y + '%', width: hs.w + '%', height: hs.h + '%' }}
+              onClick={() => onHsClick(hs)}
+              title={hs.label}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="ctrl-preview-alt">{kind === 'iframe' ? '🌐 iframe' : kind === 'html' ? '📄 HTML' : kind}</div>
+      )}
+      <div className="ctrl-preview-title">{slide.title}</div>
+    </div>
+  )
+}
+
+function NextSlide({ slide }) {
+  if (!slide) return <div className="ctrl-next"><div className="ctrl-preview-empty">마지막 슬라이드</div></div>
   const kind = slideKind(slide)
   return (
-    <div className={'ctrl-preview' + (dimmed ? ' dimmed' : '')}>
-      <div className="ctrl-preview-label">{label}</div>
+    <div className="ctrl-next">
+      <div className="ctrl-preview-label">다음 슬라이드</div>
       {kind === 'figma' || kind === 'video' ? (
         <div className="ctrl-preview-img">
           <img src={imageSrcFor(slide)} alt={slide.title} draggable={false} onError={imageFallback(slide)} />
@@ -176,8 +218,8 @@ export default function Controller() {
           <div className="ctrl-pos">{idx + 1} / {orderedSlideIds.length}</div>
         </div>
         <div className="ctrl-previews">
-          <SlidePreview slide={current} slideId={currentId} label="현재 슬라이드" />
-          <SlidePreview slide={next} slideId={nextId} label="다음 슬라이드" dimmed />
+          <CurrentSlide slide={current} goTo={goTo} />
+          <NextSlide slide={next} />
         </div>
         <div className="ctrl-controls">
           <button disabled={!prevId} onClick={() => prevId && goTo(prevId)}>← 이전</button>
