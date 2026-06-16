@@ -5,7 +5,9 @@ import { imageSrcFor } from './lib/images.js'
 import Layout from './components/Layout.jsx'
 import SlideView from './components/SlideView.jsx'
 import DemoView from './components/DemoView.jsx'
+import PresentView from './components/PresentView.jsx'
 import Editor from './pages/Editor.jsx'
+import Controller from './pages/Controller.jsx'
 
 // Warm the HTTP cache for EVERY slide image on first load (deck order first), so
 // every transition is instant. Uses fetch (not <img>) to fill the disk cache
@@ -71,14 +73,19 @@ export default function App() {
   }
 
   const isEditor = location.pathname.startsWith('/admin')
+  const isPresent = location.pathname.startsWith('/present')
+  const isControl = location.pathname.startsWith('/control')
   const preloading = prog.total > 0 && prog.loaded < prog.total
-  const showLoader = preloading && !skipped && !isEditor
+  const showLoader = preloading && !skipped && !isEditor && !isPresent && !isControl
   const pct = prog.total ? Math.round((prog.loaded / prog.total) * 100) : 0
 
   return (
     <>
       <Routes>
         <Route path="/admin" element={<Editor />} />
+        <Route path="/control" element={<Controller />} />
+        <Route path="/control/:id" element={<Controller />} />
+        <Route path="/present/:id" element={<PresentView />} />
         <Route element={<Layout />}>
           <Route path="/" element={<FirstSlideRedirect />} />
           <Route path="/slide/:id" element={<SlideRoute />} />
